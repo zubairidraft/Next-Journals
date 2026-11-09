@@ -4,5 +4,6 @@ node_modules/
 *.jks
 *.keystore
 *.base64
+*.apk
 android/keystore.properties
 signing/
