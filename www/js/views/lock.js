@@ -4,6 +4,7 @@ import * as db from '../db.js';
 import { passwordStrength } from '../crypto.js';
 import * as backup from '../backup.js';
 import * as drive from '../drive.js';
+import * as store from '../store.js';
 import { pickFile, biometricEnabled, biometricUnlock, biometricAvailable, biometricEnable } from '../native.js';
 import { APP } from '../config.js';
 
@@ -54,6 +55,71 @@ function setupForm(onUnlocked) {
     meter.dataset.score = s.score;
     meterLabel.textContent = pw.value ? s.label : 'Use at least 8 characters';
   });
+
+  const googleBox = h('div');
+  const orDivider = h('div', { class: 'divider' }, h('span', {}, 'or set master password'));
+
+  const renderGoogleState = () => {
+    const acc = drive.account();
+    googleBox.innerHTML = '';
+    if (acc) {
+      googleBox.append(
+        h('div', {
+          style: 'padding: 10px 14px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;'
+        },
+          h('div', { style: 'display: flex; align-items: center; gap: 10px;' },
+            icon('google'),
+            h('div', {},
+              h('small', { class: 'muted', style: 'display: block; font-size: 11px; line-height: 1.2;' }, 'Signed in with Google'),
+              h('b', { style: 'font-size: 13.5px;' }, acc.email || acc.name)
+            )
+          ),
+          h('button', {
+            class: 'btn ghost slim',
+            type: 'button',
+            style: 'font-size: 12px; padding: 4px 8px;',
+            onclick: async () => {
+              await drive.signOut();
+              renderGoogleState();
+              toast('Disconnected from Google');
+            }
+          }, 'Disconnect')
+        )
+      );
+      orDivider.style.display = 'none';
+    } else {
+      const googleBtn = h('button', {
+        class: 'btn ghost block',
+        type: 'button',
+        style: 'display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600; padding: 11px; border: 1px solid var(--line-2); border-radius: 10px;',
+        onclick: async () => {
+          const b = busy('Opening Google sign-in…');
+          try {
+            await drive.signIn();
+            b.update('Checking Google Drive for existing backups…');
+            const files = await drive.listBackups();
+            b.done();
+            renderGoogleState();
+            if (files && files.length > 0) {
+              toast(`Found ${files.length} backup(s) in your Google Drive!`, 'success');
+              showDriveBackupsSheet(files, onUnlocked);
+            } else {
+              toast('Google connected! Set your master password below.', 'success', 5000);
+              pw.focus();
+            }
+          } catch (e2) {
+            b.done();
+            toast(e2.message, 'error', 4500);
+          }
+        }
+      }, icon('google'), 'Sign in with Google');
+      googleBox.append(googleBtn);
+      orDivider.style.display = 'flex';
+    }
+  };
+
+  renderGoogleState();
+
   const form = h('form', { class: 'stack', onsubmit: async (e) => {
     e.preventDefault();
     err.textContent = '';
@@ -63,11 +129,16 @@ function setupForm(onUnlocked) {
     const b = busy('Creating your encrypted diary…');
     try {
       await db.setupVault(pw.value);
+      if (drive.isConnected()) {
+        try { await store.saveSettings({ driveAuto: 'daily' }); } catch {}
+      }
       b.done();
       await offerBiometric(pw.value);
       onUnlocked({ firstRun: true });
     } catch (e2) { b.done(); err.textContent = e2.message; }
   } },
+    googleBox,
+    orDivider,
     h('p', { class: 'lead' }, 'Create a master password. Everything you save is encrypted with it, on this device and in your backups.'),
     pw, h('div', { class: 'row gap' }, meter, meterLabel), pw2,
     h('label', { class: 'check', for: 'ack' }, ack, h('span', {}, 'I understand that if I forget this password, my data cannot be recovered.')),
@@ -122,21 +193,25 @@ async function restoreFromFile(onUnlocked) {
   restoreBytes(new Uint8Array(await file.arrayBuffer()), onUnlocked);
 }
 
+function showDriveBackupsSheet(files, onUnlocked) {
+  let s;
+  const list = h('div', { class: 'list' }, files.map(f => h('button', { class: 'list-row', onclick: async () => {
+    s.close();
+    const b2 = busy('Downloading backup…');
+    let bytes;
+    try { bytes = await drive.downloadBackup(f.id); } catch (e) { b2.done(); return toast(e.message, 'error'); }
+    b2.done();
+    restoreBytes(bytes, onUnlocked);
+  } }, icon('cloud'), h('span', { class: 'grow' }, h('b', {}, new Date(f.createdTime).toLocaleString()), h('small', { class: 'muted block' }, f.name)), h('small', { class: 'muted' }, fmtSize(Number(f.size || 0))))));
+  s = openSheet(list, { title: 'Choose a backup to restore' });
+}
+
 async function restoreFromDrive(onUnlocked) {
   try {
     const b = busy('Connecting to Google Drive…');
     try { await drive.signIn(); } finally { b.done(); }
     const files = await drive.listBackups();
-    if (!files.length) return toast('No backups found in your Google Drive', 'error');
-    let s;
-    const list = h('div', { class: 'list' }, files.map(f => h('button', { class: 'list-row', onclick: async () => {
-      s.close();
-      const b2 = busy('Downloading backup…');
-      let bytes;
-      try { bytes = await drive.downloadBackup(f.id); } catch (e) { b2.done(); return toast(e.message, 'error'); }
-      b2.done();
-      restoreBytes(bytes, onUnlocked);
-    } }, icon('cloud'), h('span', { class: 'grow' }, h('b', {}, new Date(f.createdTime).toLocaleString()), h('small', { class: 'muted block' }, f.name)), h('small', { class: 'muted' }, fmtSize(Number(f.size || 0))))));
-    s = openSheet(list, { title: 'Choose a backup' });
+    if (!files.length) return toast('No backups found in your Google Drive', 'info');
+    showDriveBackupsSheet(files, onUnlocked);
   } catch (e) { toast(e.message, 'error', 4000); }
 }
