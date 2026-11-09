@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+# Never commit your signing key or its passwords
+*.jks
+*.keystore
+*.base64
+android/keystore.properties
+signing/

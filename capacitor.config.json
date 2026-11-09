@@ -1,0 +1,15 @@
+{
+  "appId": "com.nextedgemarketing.nextjournals",
+  "appName": "Next Journals",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#1B2744",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_journal",
+      "iconColor": "#E39A2D"
+    }
+  }
+}

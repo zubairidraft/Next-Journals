@@ -1,0 +1,74 @@
+# Builds the Next Journals Android APK on every push to main (or manually).
+# Download it from the run page → "Artifacts" → next-journals-apk.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   NJ_KEYSTORE_BASE64   – contents of nextjournals-release.jks.base64
+#   NJ_KEYSTORE_PASSWORD – keystore password
+#   NJ_KEY_ALIAS         – nextjournals
+#   NJ_KEY_PASSWORD      – key password (same as keystore password)
+# Without these secrets a debug-signed APK is built, and Google sign-in
+# will not work in it (its SHA-1 changes on every run).
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync web app into Android project
+        run: npx cap sync android
+
+      - name: Restore signing key
+        env:
+          NJ_KEYSTORE_BASE64: ${{ secrets.NJ_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$NJ_KEYSTORE_BASE64" ]; then
+            echo "$NJ_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/nextjournals-release.jks"
+            echo "NJ_KEYSTORE_PATH=$RUNNER_TEMP/nextjournals-release.jks" >> "$GITHUB_ENV"
+            echo "SIGNED=true" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No signing secrets set — building a debug APK. Google sign-in will not work in it."
+            echo "SIGNED=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build APK
+        working-directory: android
+        env:
+          NJ_KEYSTORE_PASSWORD: ${{ secrets.NJ_KEYSTORE_PASSWORD }}
+          NJ_KEY_ALIAS: ${{ secrets.NJ_KEY_ALIAS }}
+          NJ_KEY_PASSWORD: ${{ secrets.NJ_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ "$SIGNED" = "true" ]; then
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk ../NextJournals.apk
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk ../NextJournals-debug.apk
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-journals-apk
+          path: NextJournals*.apk
+          if-no-files-found: error

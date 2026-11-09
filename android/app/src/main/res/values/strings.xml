@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Next Journals</string>
+    <string name="title_activity_main">Next Journals</string>
+    <string name="package_name">com.nextedgemarketing.nextjournals</string>
+    <string name="custom_url_scheme">com.nextedgemarketing.nextjournals</string>
+</resources>

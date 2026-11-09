@@ -1,0 +1,26 @@
+{
+  "name": "next-journals",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Next Journals by Next Edge Marketing — encrypted journal, tasks and password vault for browser and Android.",
+  "scripts": {
+    "serve": "npx --yes http-server www -p 8080 -c-1",
+    "sync": "npx cap sync android",
+    "open:android": "npx cap open android",
+    "apk:debug": "npx cap sync android && cd android && ./gradlew assembleDebug",
+    "apk:release": "npx cap sync android && cd android && ./gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/share": "^8.0.3",
+    "@capgo/capacitor-native-biometric": "^8.9.1",
+    "@capgo/capacitor-social-login": "^8.7.7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0"
+  }
+}

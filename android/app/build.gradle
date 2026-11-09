@@ -1,0 +1,76 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "com.nextedgemarketing.nextjournals"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.nextedgemarketing.nextjournals"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // Signing: the same key must sign every build, because its SHA-1 is
+    // registered in Google Cloud for Google sign-in (Drive backup).
+    // Local builds read android/keystore.properties; GitHub Actions uses secrets.
+    def ksProps = new Properties()
+    def ksFile = rootProject.file('keystore.properties')
+    if (ksFile.exists()) ksFile.withInputStream { ksProps.load(it) }
+    def ksPath = System.getenv('NJ_KEYSTORE_PATH') ?: ksProps.getProperty('storeFile')
+    def hasKeystore = ksPath && file(ksPath).exists()
+    signingConfigs {
+        if (hasKeystore) {
+            nextjournals {
+                storeFile file(ksPath)
+                storePassword System.getenv('NJ_KEYSTORE_PASSWORD') ?: ksProps.getProperty('storePassword')
+                keyAlias System.getenv('NJ_KEY_ALIAS') ?: ksProps.getProperty('keyAlias')
+                keyPassword System.getenv('NJ_KEY_PASSWORD') ?: ksProps.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            if (hasKeystore) signingConfig signingConfigs.nextjournals
+        }
+        release {
+            if (hasKeystore) signingConfig signingConfigs.nextjournals
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
