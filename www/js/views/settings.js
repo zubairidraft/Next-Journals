@@ -189,7 +189,10 @@ export async function render(root, ctx) {
     h('footer', { class: 'about' },
       h('b', {}, `${APP.name} ${APP.version}`), h('span', {}, 'by ' + APP.company),
       h('small', { class: 'muted' }, `${stats.entries} entries · ${stats.tasks} tasks · ${stats.passwords} passwords · ${stats.media} files`),
-      h('small', { class: 'muted' }, 'AES-256-GCM encryption · PBKDF2-SHA256 600,000 iterations')));
+      h('small', { class: 'muted' }, 'AES-256-GCM encryption · PBKDF2-SHA256 600,000 iterations'),
+      h('p', { style: 'margin-top: 10px; font-size: 13px;' },
+        h('a', { href: 'privacy.html', target: '_blank', style: 'color: var(--muted); text-decoration: underline; margin-right: 14px;' }, 'Privacy Policy'),
+        h('a', { href: 'terms.html', target: '_blank', style: 'color: var(--muted); text-decoration: underline;' }, 'Terms of Service'))));
 }
 
 function changePasswordSheet() {

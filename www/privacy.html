@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1B2744">
+  <title>Privacy Policy — Next Journals</title>
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .legal-page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+      line-height: 1.7;
+      color: var(--text);
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .legal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line-2);
+    }
+    .legal-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .legal-brand img {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+    .legal-back {
+      color: var(--primary, #3b82f6);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .legal-back:hover {
+      text-decoration: underline;
+    }
+    .legal-page h1 {
+      font-family: 'Literata', Georgia, serif;
+      font-size: 34px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .legal-page .updated {
+      color: var(--muted, #64748b);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .legal-page h2 {
+      font-family: 'Literata', Georgia, serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin-top: 36px;
+      margin-bottom: 14px;
+      letter-spacing: -0.01em;
+    }
+    .legal-page p, .legal-page li {
+      margin-bottom: 14px;
+      font-size: 15.5px;
+      color: var(--text);
+    }
+    .legal-page ul {
+      padding-left: 24px;
+      margin-bottom: 20px;
+    }
+    .legal-page li {
+      margin-bottom: 8px;
+    }
+    .legal-box {
+      background: var(--surface, #f8fafc);
+      border: 1px solid var(--line-2, #e2e8f0);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .legal-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .footer-legal {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line-2);
+      font-size: 13.5px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-legal a {
+      color: var(--text);
+      text-decoration: none;
+      margin-left: 16px;
+    }
+    .footer-legal a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="legal-page">
+    <nav class="legal-nav">
+      <a href="/" class="legal-brand">
+        <img src="icons/icon-192.png" alt="Next Journals Logo">
+        <span>Next Journals</span>
+      </a>
+      <a href="/" class="legal-back">&larr; Back to App</a>
+    </nav>
+
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: November 9, 2026 &bull; Effective date: November 9, 2026</p>
+
+    <p>Welcome to <strong>Next Journals</strong>, developed and operated by <strong>Next Edge Marketing</strong> ("we", "our", or "us"). We believe your personal thoughts, memories, tasks, and passwords are sacred and belong exclusively to you. Next Journals is engineered from the ground up on a <strong>zero-knowledge, client-side encryption architecture</strong>.</p>
+
+    <div class="legal-box">
+      <strong>Core Privacy Guarantee:</strong>
+      Next Journals does not operate central user databases. We cannot read your journal entries, see your media attachments, decrypt your passwords, or access your master password. Everything is encrypted directly on your device before it is stored or backed up.
+    </div>
+
+    <h2>1. Information We Access and Process</h2>
+    <p>Because Next Journals operates locally on your device, the information you store remains under your complete control:</p>
+    <ul>
+      <li><strong>Journal Entries, Tasks, Notes, and Media:</strong> Stored locally in your device's private database (IndexedDB on web / native storage on Android) in AES-256-GCM encrypted format.</li>
+      <li><strong>Master Password & Cryptographic Keys:</strong> Derived locally via PBKDF2-SHA256 (600,000 iterations). Your master password is never transmitted across the network.</li>
+      <li><strong>Biometric Credentials (Android only):</strong> If you enable fingerprint or biometric unlock, credentials are securely stored using your phone's hardware Android Keystore. We never receive or store biometric data.</li>
+    </ul>
+
+    <h2>2. Google User Data and Google Drive API Usage</h2>
+    <p>Next Journals offers an optional feature allowing users to back up their encrypted diary files to their personal Google Drive storage. When you choose to connect your Google Account:</p>
+    <ul>
+      <li><strong>Information Accessed:</strong>
+        <ul>
+          <li>Basic account details (email address and name) to display your connected account in the app's settings.</li>
+          <li>OAuth 2.0 authorization for the <code>https://www.googleapis.com/auth/drive.file</code> scope.</li>
+        </ul>
+      </li>
+      <li><strong>How Google Data is Used:</strong>
+        <ul>
+          <li>We access your Google Drive <strong>solely and exclusively</strong> to create, update, list, and download encrypted backup files (<code>.njbackup</code>) inside a dedicated folder named <strong>"Next Journals Backups"</strong>.</li>
+          <li>The <code>drive.file</code> scope restricts our application to only viewing and managing files that Next Journals itself has created. Next Journals <strong>cannot</strong> read, view, modify, or delete any of your other Google Drive files, photos, or documents.</li>
+          <li>All backup files uploaded to your Google Drive are encrypted client-side with AES-256-GCM prior to transmission. Even on Google Drive, your backups are unreadable without your master password.</li>
+        </ul>
+      </li>
+      <li><strong>Data Sharing and Selling:</strong>
+        We do <strong>not</strong> share, sell, rent, transfer, or disclose Google user data to any third parties, advertisers, data brokers, or external servers. Google user data is never used for serving advertisements, credit determinations, surveillance, or training artificial intelligence or machine learning models.
+      </li>
+    </ul>
+
+    <h2>3. Google API Services User Data Policy (Limited Use)</h2>
+    <div class="legal-box">
+      Next Journals' use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the <strong>Limited Use</strong> requirements.
+    </div>
+
+    <h2>4. Data Retention, Disconnection, and Revocation</h2>
+    <ul>
+      <li><strong>Disconnecting Google Drive:</strong> You can disconnect your Google Account at any time from within Next Journals by navigating to <em>Settings &rarr; Google Drive backup &rarr; Disconnect</em>. This immediately clears your access token and connection data from your device.</li>
+      <li><strong>Revoking Access:</strong> You can revoke Next Journals' access to your Google Account at any time via Google Account Security Settings at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>.</li>
+      <li><strong>Deleting Your Backups:</strong> You maintain full ownership of your backup files. You can delete backup files directly within your Google Drive under the "Next Journals Backups" folder or through the in-app backup browser.</li>
+      <li><strong>Device Erasure:</strong> You can permanently wipe all local data stored on your device at any time using the <em>Danger Zone &rarr; Erase everything</em> option in Settings.</li>
+    </ul>
+
+    <h2>5. Third-Party Services and Analytics</h2>
+    <p>Next Journals does not include third-party advertising SDKs, tracking pixels, or intrusive analytics services. The application does not track your location, browsing habits, or behavioral data.</p>
+
+    <h2>6. Security Measures</h2>
+    <p>We implement industry-standard cryptographic techniques to protect your data:</p>
+    <ul>
+      <li>PBKDF2 with SHA-256 and 600,000 iterations for key derivation.</li>
+      <li>Authenticated AES-256-GCM encryption for all stored records, blobs, and backups.</li>
+      <li>Tamper-resistant backup packages with authenticated headers.</li>
+      <li>Direct secure HTTPS connections to Google APIs without intermediary proxies.</li>
+    </ul>
+
+    <h2>7. Children's Privacy</h2>
+    <p>Next Journals is a general-audience personal productivity tool. We do not knowingly collect personal identifiable information from children under the age of 13.</p>
+
+    <h2>8. Changes to This Privacy Policy</h2>
+    <p>We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated effective date. Continued use of the application after changes constitutes acceptance of the updated policy.</p>
+
+    <h2>9. Contact Us</h2>
+    <p>If you have questions, concerns, or requests regarding this Privacy Policy or your data protection rights, please contact us at:</p>
+    <div class="legal-box">
+      <strong>Next Edge Marketing</strong><br>
+      Developer: Next Journals Team<br>
+      Email: <a href="mailto:zubairi.draft@gmail.com">zubairi.draft@gmail.com</a><br>
+      Website: <a href="https://next-journals-www.vercel.app/">https://next-journals-www.vercel.app/</a>
+    </div>
+
+    <footer class="footer-legal">
+      <span>&copy; 2026 Next Edge Marketing. All rights reserved.</span>
+      <div>
+        <a href="/terms.html">Terms of Service</a>
+        <a href="/">Open Next Journals</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

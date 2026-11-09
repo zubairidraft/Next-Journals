@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1B2744">
+  <title>Terms of Service — Next Journals</title>
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .legal-page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+      line-height: 1.7;
+      color: var(--text);
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .legal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line-2);
+    }
+    .legal-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .legal-brand img {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+    .legal-back {
+      color: var(--primary, #3b82f6);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .legal-back:hover {
+      text-decoration: underline;
+    }
+    .legal-page h1 {
+      font-family: 'Literata', Georgia, serif;
+      font-size: 34px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .legal-page .updated {
+      color: var(--muted, #64748b);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .legal-page h2 {
+      font-family: 'Literata', Georgia, serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin-top: 36px;
+      margin-bottom: 14px;
+      letter-spacing: -0.01em;
+    }
+    .legal-page p, .legal-page li {
+      margin-bottom: 14px;
+      font-size: 15.5px;
+      color: var(--text);
+    }
+    .legal-page ul {
+      padding-left: 24px;
+      margin-bottom: 20px;
+    }
+    .legal-page li {
+      margin-bottom: 8px;
+    }
+    .legal-box {
+      background: var(--surface, #f8fafc);
+      border: 1px solid var(--line-2, #e2e8f0);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .footer-legal {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line-2);
+      font-size: 13.5px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-legal a {
+      color: var(--text);
+      text-decoration: none;
+      margin-left: 16px;
+    }
+    .footer-legal a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="legal-page">
+    <nav class="legal-nav">
+      <a href="/" class="legal-brand">
+        <img src="icons/icon-192.png" alt="Next Journals Logo">
+        <span>Next Journals</span>
+      </a>
+      <a href="/" class="legal-back">&larr; Back to App</a>
+    </nav>
+
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: November 9, 2026 &bull; Effective date: November 9, 2026</p>
+
+    <p>These Terms of Service ("Terms") govern your access to and use of <strong>Next Journals</strong> ("Application", "Service"), provided by <strong>Next Edge Marketing</strong> ("we", "us", or "our").</p>
+    <p>By accessing or using Next Journals on the web, as a Progressive Web App, or as an Android application, you agree to be bound by these Terms. If you do not agree, do not use the application.</p>
+
+    <h2>1. Description of the Service</h2>
+    <p>Next Journals is a private, encrypted personal journal, task management tool, note taker, and password vault. The application operates using a client-side architecture where your entries, passwords, lists, and uploaded attachments are encrypted and stored locally on your device.</p>
+
+    <h2>2. User Responsibility & Zero-Knowledge Architecture</h2>
+    <div class="legal-box">
+      <strong>Important Security Notice:</strong>
+      Next Journals employs zero-knowledge encryption. Your data is encrypted using your Master Password. We do not store, retain, or have access to your Master Password or encryption keys. <strong>There is no automated password recovery mechanism.</strong> If you lose or forget your Master Password, your encrypted data cannot be recovered by us. You are solely responsible for maintaining the confidentiality and safety of your Master Password.
+    </div>
+
+    <h2>3. Cloud Backups & Third-Party Integrations</h2>
+    <p>Next Journals enables you to export encrypted local backups (<code>.njbackup</code>) and optionally synchronize these backups to your personal Google Drive account.</p>
+    <ul>
+      <li>When using Google Drive integration, you authorize Next Journals to access your Google Drive using the restricted <code>drive.file</code> scope solely for saving and managing files created by Next Journals.</li>
+      <li>All data uploaded to Google Drive is client-side encrypted before transfer.</li>
+      <li>You are responsible for maintaining the security of your third-party Google Account.</li>
+      <li>You may disconnect the Google Drive service at any time in the app settings or through your Google Account permissions page.</li>
+    </ul>
+
+    <h2>4. Acceptable Use</h2>
+    <p>You agree to use Next Journals only for lawful personal purposes and in accordance with these Terms. You agree not to:</p>
+    <ul>
+      <li>Use the service to engage in any unlawful, fraudulent, or malicious activities.</li>
+      <li>Attempt to reverse-engineer, decompile, or tamper with the security or encryption mechanisms of the application with malicious intent.</li>
+      <li>Interfere with or disrupt the integrity or security of third-party APIs used by the application.</li>
+    </ul>
+
+    <h2>5. Intellectual Property Rights</h2>
+    <p>The application, including its source code, design, logos, trademarks, and user interface, is the intellectual property of Next Edge Marketing and is protected by applicable copyright and trademark laws. You are granted a limited, revocable, non-exclusive license to use the application for your personal use.</p>
+
+    <h2>6. Disclaimer of Warranties</h2>
+    <p>NEXT JOURNALS IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS, WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT GUARANTEE THAT THE APPLICATION WILL ALWAYS BE SECURE, TIMELY, OR ERROR-FREE.</p>
+
+    <h2>7. Limitation of Liability</h2>
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL NEXT EDGE MARKETING, ITS OFFICERS, DIRECTORS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF DATA, CORRUPTION OF DATA, HARDWARE FAILURE, OR LOSS OF ACCESSIBILITY ARISING OUT OF OR IN CONNECTION WITH YOUR USE OR INABILITY TO USE THE APPLICATION OR THE LOSS OF YOUR MASTER PASSWORD.</p>
+
+    <h2>8. Modifications to Terms</h2>
+    <p>We reserve the right to revise these Terms at any time. Any changes will be posted on this page with an updated revision date. Continued use of the application after such changes constitutes acceptance of the new Terms.</p>
+
+    <h2>9. Contact Information</h2>
+    <p>If you have any questions or concerns regarding these Terms, please contact us at:</p>
+    <div class="legal-box">
+      <strong>Next Edge Marketing</strong><br>
+      Email: <a href="mailto:zubairi.draft@gmail.com">zubairi.draft@gmail.com</a><br>
+      Website: <a href="https://next-journals-www.vercel.app/">https://next-journals-www.vercel.app/</a>
+    </div>
+
+    <footer class="footer-legal">
+      <span>&copy; 2026 Next Edge Marketing. All rights reserved.</span>
+      <div>
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="/">Open Next Journals</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
