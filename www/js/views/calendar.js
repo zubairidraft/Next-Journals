@@ -1,7 +1,7 @@
 // Month calendar: journal entries (coloured by mood) and task due dates
 import { h, icon, iconBtn, MONTHS, MOODS, dateStr, todayStr, fmtDate, fmtDue } from '../ui.js';
 import * as store from '../store.js';
-import { entryCard } from './journal.js';
+import { entryCard, openLifeInsights } from './journal.js';
 import { taskRow } from './tasks.js';
 
 let cursor = null;     // first day of the shown month
@@ -68,7 +68,8 @@ function draw(root) {
         h('div', { class: 'cal-legend' },
           h('span', {}, `${monthEntries.length} ${monthEntries.length === 1 ? 'entry' : 'entries'} this month`),
           moodAvg ? h('span', {}, 'Average mood ' + MOODS[Math.round(moodAvg) - 1].e) : null,
-          h('span', { class: 'row gap-xs' }, h('i', { class: 'dot dtask' }), 'Open tasks'))),
+          h('span', { class: 'row gap-xs' }, h('i', { class: 'dot dtask' }), 'Open tasks'),
+          h('button', { class: 'btn ai-glow-btn slim', type: 'button', style: 'margin-left: auto;', onclick: () => openLifeInsights(root) }, icon('sparkles', 15), 'Life Insights'))),
       h('section', { class: 'day-panel' },
         h('div', { class: 'row between' },
           h('h2', {}, fmtDate(selected, { weekday: 'long', day: 'numeric', month: 'long' })),

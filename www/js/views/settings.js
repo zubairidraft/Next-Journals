@@ -213,7 +213,7 @@ export async function render(root, ctx) {
   // On-Device AI
   const aiEnabled = ai.isAiEnabled();
   const aiSection = section('On-Device AI (Cactus Needle)',
-    row('Smart Assistant', 'Analyze journal entries for tasks, mood and tags locally',
+    row('Smart Assistant & Studio', 'Bullet-to-Story expansion, style polish, prompts and analytics',
       toggle(aiEnabled, (on) => {
         ai.setAiEnabled(on);
         toast(on ? 'On-Device AI enabled' : 'On-Device AI disabled');
@@ -221,7 +221,7 @@ export async function render(root, ctx) {
       }, 'On-Device AI')),
     row('Privacy guarantee', 'Zero-knowledge: 100% offline on this device. No text is ever uploaded.',
       h('span', { class: 'chip on', style: 'border-color: var(--success); color: var(--success);' }, '100% Local & Private')),
-    row('Engine status', 'Cactus Needle Architecture',
+    row('Engine version', 'Cactus Needle Architecture',
       h('span', { class: 'muted' }, ai.AI_CONFIG.version)));
 
   // Backup (local)

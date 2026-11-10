@@ -80,6 +80,9 @@ const P = {
   textColor: '<path d="m4 19 7-15h2l7 15h-2.5l-2-4.5H8.5L6.5 19H4Zm5.3-6.5h5.4L12 6.7 9.3 12.5Z"/><path d="M3 21.5h18" stroke-width="2.6"/>',
   highlighter: '<path d="m14 3.5 6.5 6.5-9 9H5v-6.5l9-9Z"/><path d="m11 6.5 6.5 6.5M3 21h18"/>',
   csv: '<path d="M4 4v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6a2 2 0 0 0-2 2Z"/><path d="M14 2v6h6M8 13h1.5a1.5 1.5 0 0 1 0 3H8v-3Zm5 0h2a1.5 1.5 0 0 1 0 3h-2v-3Z"/>',
+  sparkles: '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/><path d="M5 3v4M3 5h4M19 17v4M17 19h4"/>',
+  chart: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  bulb: '<path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 0 0-7-7z"/>',
 };
 
 export function icon(name, size = 20, cls = '') {
