@@ -133,12 +133,175 @@ export function renderEditor(root, id, params) {
     document.execCommand('insertHTML', false, html ? sanitize(html) : text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])).replace(/\n/g, '<br>'));
   });
   const cmd = (c, v) => () => { body.focus(); document.execCommand(c, false, v); touch(); };
+
+  // Colors for text picker & highlighter
+  const TEXT_COLORS = [
+    { name: 'Default', value: 'inherit' },
+    { name: 'Red', value: '#DC2626' },
+    { name: 'Orange', value: '#EA580C' },
+    { name: 'Amber', value: '#D97706' },
+    { name: 'Emerald', value: '#16A34A' },
+    { name: 'Teal', value: '#0D9488' },
+    { name: 'Blue', value: '#2563EB' },
+    { name: 'Purple', value: '#7C3AED' },
+    { name: 'Pink', value: '#DB2777' },
+    { name: 'Black', value: '#111827' },
+    { name: 'Muted Gray', value: '#6B7280' }
+  ];
+
+  const HIGHLIGHT_COLORS = [
+    { name: 'Yellow', value: '#FEF08A' },
+    { name: 'Green', value: '#BBF7D0' },
+    { name: 'Blue', value: '#BAE6FD' },
+    { name: 'Pink', value: '#FBCFE8' },
+    { name: 'Orange', value: '#FED7AA' },
+    { name: 'Remove', value: 'transparent' }
+  ];
+
+  let activeColorPopover = null;
+  const colorBarWrap = h('div');
+
+  const closeColorBar = () => {
+    colorBarWrap.innerHTML = '';
+    activeColorPopover = null;
+  };
+
+  const toggleColorBar = (type) => {
+    if (activeColorPopover === type) {
+      closeColorBar();
+      return;
+    }
+    activeColorPopover = type;
+    colorBarWrap.innerHTML = '';
+    const pop = h('div', { class: 'color-bar-popover' });
+
+    if (type === 'text') {
+      pop.append(h('small', { class: 'muted', style: 'font-weight: 600; margin-right: 4px;' }, 'Text color:'));
+      TEXT_COLORS.forEach(c => {
+        if (c.value === 'inherit') {
+          pop.append(h('button', {
+            class: 'color-pill clear-pill',
+            type: 'button',
+            title: 'Default color',
+            onmousedown: (e) => e.preventDefault(),
+            onclick: () => {
+              body.focus();
+              document.execCommand('foreColor', false, 'inherit');
+              touch();
+              closeColorBar();
+            }
+          }, 'Default'));
+        } else {
+          pop.append(h('button', {
+            class: 'color-pill',
+            type: 'button',
+            title: c.name,
+            style: `background: ${c.value};`,
+            onmousedown: (e) => e.preventDefault(),
+            onclick: () => {
+              body.focus();
+              document.execCommand('foreColor', false, c.value);
+              touch();
+              closeColorBar();
+            }
+          }));
+        }
+      });
+      // Custom color
+      const customInput = h('input', {
+        type: 'color',
+        title: 'Custom color',
+        style: 'width: 26px; height: 26px; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 50%;',
+        onmousedown: (e) => e.stopPropagation(),
+        onchange: (e) => {
+          body.focus();
+          document.execCommand('foreColor', false, e.target.value);
+          touch();
+          closeColorBar();
+        }
+      });
+      pop.append(customInput);
+    } else if (type === 'highlight') {
+      pop.append(h('small', { class: 'muted', style: 'font-weight: 600; margin-right: 4px;' }, 'Highlight:'));
+      HIGHLIGHT_COLORS.forEach(c => {
+        if (c.value === 'transparent') {
+          pop.append(h('button', {
+            class: 'color-pill clear-pill',
+            type: 'button',
+            title: 'Clear highlight',
+            onmousedown: (e) => e.preventDefault(),
+            onclick: () => {
+              body.focus();
+              document.execCommand('hiliteColor', false, 'transparent');
+              touch();
+              closeColorBar();
+            }
+          }, 'Clear'));
+        } else {
+          pop.append(h('button', {
+            class: 'color-pill',
+            type: 'button',
+            title: c.name,
+            style: `background: ${c.value};`,
+            onmousedown: (e) => e.preventDefault(),
+            onclick: () => {
+              body.focus();
+              document.execCommand('hiliteColor', false, c.value);
+              touch();
+              closeColorBar();
+            }
+          }));
+        }
+      });
+    }
+
+    colorBarWrap.append(pop);
+  };
+
+  const fontSelect = h('select', {
+    class: 'toolbar-select',
+    title: 'Font family',
+    'aria-label': 'Font family',
+    onmousedown: (e) => e.stopPropagation(),
+    onchange: (e) => {
+      const f = e.target.value;
+      if (!f) return;
+      body.focus();
+      document.execCommand('fontName', false, f);
+      touch();
+      fontSelect.value = '';
+    }
+  },
+    h('option', { value: '' }, 'Font…'),
+    h('option', { value: "'Literata', Georgia, serif" }, 'Literata (Serif)'),
+    h('option', { value: "'Manrope', sans-serif" }, 'Manrope (Sans)'),
+    h('option', { value: 'Georgia, serif' }, 'Georgia'),
+    h('option', { value: 'Arial, sans-serif' }, 'Arial'),
+    h('option', { value: 'Courier New, monospace' }, 'Monospace'),
+    h('option', { value: 'cursive' }, 'Handwriting')
+  );
+
   const toolbar = h('div', { class: 'toolbar', role: 'toolbar', 'aria-label': 'Formatting' },
-    iconBtn('bold', 'Bold', cmd('bold')), iconBtn('italic', 'Italic', cmd('italic')), iconBtn('underline', 'Underline', cmd('underline')),
-    iconBtn('heading', 'Heading', cmd('formatBlock', '<h2>')), iconBtn('quote', 'Quote', cmd('formatBlock', '<blockquote>')),
-    iconBtn('ul', 'Bulleted list', cmd('insertUnorderedList')), iconBtn('ol', 'Numbered list', cmd('insertOrderedList')),
-    h('button', { class: 'icon-btn text', type: 'button', title: 'Normal text', 'aria-label': 'Normal text', onclick: cmd('formatBlock', '<p>') }, 'Aa'));
-  toolbar.addEventListener('mousedown', (e) => e.preventDefault()); // keep selection in editor
+    fontSelect,
+    h('div', { class: 'toolbar-sep' }),
+    iconBtn('bold', 'Bold', cmd('bold')),
+    iconBtn('italic', 'Italic', cmd('italic')),
+    iconBtn('underline', 'Underline', cmd('underline')),
+    h('div', { class: 'toolbar-sep' }),
+    iconBtn('textColor', 'Text Color', () => toggleColorBar('text')),
+    iconBtn('highlighter', 'Highlight Color', () => toggleColorBar('highlight')),
+    h('div', { class: 'toolbar-sep' }),
+    iconBtn('heading', 'Heading', cmd('formatBlock', '<h2>')),
+    iconBtn('quote', 'Quote', cmd('formatBlock', '<blockquote>')),
+    iconBtn('ul', 'Bulleted list', cmd('insertUnorderedList')),
+    iconBtn('ol', 'Numbered list', cmd('insertOrderedList')),
+    h('button', { class: 'icon-btn text', type: 'button', title: 'Normal text', 'aria-label': 'Normal text', onclick: cmd('formatBlock', '<p>') }, 'Aa')
+  );
+  toolbar.addEventListener('mousedown', (e) => {
+    if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'INPUT') {
+      e.preventDefault(); // keep selection in editor
+    }
+  });
 
   // Attachments
   const strip = h('div', { class: 'thumbs' });
@@ -181,6 +344,7 @@ export function renderEditor(root, id, params) {
       title,
       moods,
       toolbar,
+      colorBarWrap,
       body,
       h('section', { class: 'attach' },
         strip,

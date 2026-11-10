@@ -523,3 +523,50 @@ h2.sub, .sub { font-size: 14px; font-weight: 700; color: var(--muted); margin: 1
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 select.input.slim { padding-right: 30px; }
+
+/* Color swatches for Global Theme in Settings */
+.color-swatches { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 4px 0; }
+.color-swatch-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;
+  position: relative; transition: transform .15s, box-shadow .15s; outline: none; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.color-swatch-btn:hover { transform: scale(1.1); }
+.color-swatch-btn.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--page), 0 2px 8px rgba(0,0,0,.25); }
+.color-swatch-btn .swatch-check { width: 14px; height: 14px; stroke: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+
+/* Custom color picker wrapper */
+.custom-color-wrap { position: relative; width: 34px; height: 34px; border-radius: 50%; overflow: hidden; border: 2px dashed var(--line-2); display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; }
+.custom-color-wrap input[type=color] { position: absolute; inset: -10px; width: 60px; height: 60px; opacity: 0; cursor: pointer; }
+
+/* Toolbar Font Selector & Color Pickers */
+.toolbar-select {
+  height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--page);
+  color: var(--text); font-size: 13px; font-weight: 500; padding: 0 8px; outline: none;
+  cursor: pointer; max-width: 140px;
+}
+.toolbar-select:focus { border-color: var(--ribbon); }
+.toolbar-sep { width: 1px; height: 22px; background: var(--line); margin: 6px 4px; align-self: center; flex: none; }
+
+.color-bar-popover {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%;
+  padding: 8px 12px; background: var(--surface, #f8fafc); border: 1px solid var(--line);
+  border-radius: 10px; margin: 4px 0 10px; animation: fadeIn .15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.color-bar-popover .color-pill {
+  width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15);
+  cursor: pointer; transition: transform .12s; padding: 0; outline: none; flex: none;
+}
+.color-bar-popover .color-pill:hover { transform: scale(1.25); }
+.color-bar-popover .color-pill.clear-pill {
+  width: auto; height: 24px; border-radius: 12px; padding: 0 8px; font-size: 11.5px;
+  background: var(--page); color: var(--text); border: 1px solid var(--line-2); font-weight: 500;
+}
+
+/* CSV Preview Table */
+.csv-preview-wrap { max-height: 240px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; margin: 12px 0; }
+.csv-preview-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+.csv-preview-table th { background: var(--paper); padding: 8px 12px; font-weight: 600; border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+.csv-preview-table td { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--text); }
+.csv-preview-table tr:last-child td { border-bottom: none; }

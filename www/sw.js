@@ -1,6 +1,6 @@
 // Offline cache for the app shell (browser version only).
 // Only app code is cached here — your diary data lives encrypted in IndexedDB.
-const CACHE = 'nj-v1.0.2';
+const CACHE = 'nj-v1.0.3';
 const ASSETS = [
   './', 'index.html', 'privacy.html', 'terms.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/ui.js', 'js/db.js', 'js/crypto.js', 'js/store.js', 'js/backup.js', 'js/drive.js',

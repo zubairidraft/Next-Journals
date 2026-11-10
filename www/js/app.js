@@ -33,13 +33,110 @@ const NAV = [
 ];
 const TABS = ['journal', 'calendar', 'tasks', 'vault'];
 
-// ---------- Theme ----------
-function applyTheme() {
+// ---------- Theme & Appearance Settings ----------
+export const THEMES = {
+  navy: {
+    name: 'Navy & Amber',
+    color: '#1B2744',
+    light: { ink: '#1B2744', ink2: '#2D3D66', inkSoft: '#E7EBF4', ribbon: '#E39A2D', ribbonSoft: '#FBEFD9', ribbonInk: '#7A4B08' },
+    dark: { ink: '#9DB2EA', ink2: '#B8C8F2', inkSoft: '#1F2A47', ribbon: '#F0AE48', ribbonSoft: '#3A2A12', ribbonInk: '#F7CB86' }
+  },
+  emerald: {
+    name: 'Emerald Forest',
+    color: '#134E39',
+    light: { ink: '#134E39', ink2: '#1E6B4F', inkSoft: '#E2F3EC', ribbon: '#10B981', ribbonSoft: '#D1FAE5', ribbonInk: '#065F46' },
+    dark: { ink: '#6EE7B7', ink2: '#A7F3D0', inkSoft: '#0E3527', ribbon: '#34D399', ribbonSoft: '#064E3B', ribbonInk: '#A7F3D0' }
+  },
+  purple: {
+    name: 'Royal Amethyst',
+    color: '#43236A',
+    light: { ink: '#3B1B54', ink2: '#552779', inkSoft: '#F1E8FA', ribbon: '#8B5CF6', ribbonSoft: '#EDE9FE', ribbonInk: '#5B21B6' },
+    dark: { ink: '#C4B5FD', ink2: '#DDD6FE', inkSoft: '#2B143E', ribbon: '#A78BFA', ribbonSoft: '#4C1D95', ribbonInk: '#DDD6FE' }
+  },
+  rose: {
+    name: 'Crimson Rose',
+    color: '#E11D48',
+    light: { ink: '#4C121E', ink2: '#6E1B2C', inkSoft: '#FCE7EC', ribbon: '#E11D48', ribbonSoft: '#FFE4E6', ribbonInk: '#881337' },
+    dark: { ink: '#FDA4AF', ink2: '#FECDD3', inkSoft: '#380C16', ribbon: '#FB7185', ribbonSoft: '#4C0519', ribbonInk: '#FECDD3' }
+  },
+  sky: {
+    name: 'Ocean Azure',
+    color: '#0284C7',
+    light: { ink: '#0C4264', ink2: '#135F8E', inkSoft: '#E0F2FE', ribbon: '#0284C7', ribbonSoft: '#E0F2FE', ribbonInk: '#0369A1' },
+    dark: { ink: '#7DD3FC', ink2: '#BAE6FD', inkSoft: '#082F49', ribbon: '#38BDF8', ribbonSoft: '#0C4A6E', ribbonInk: '#BAE6FD' }
+  },
+  amber: {
+    name: 'Autumn Amber',
+    color: '#D97706',
+    light: { ink: '#452205', ink2: '#6A3408', inkSoft: '#FEF3C7', ribbon: '#D97706', ribbonSoft: '#FEF3C7', ribbonInk: '#78350F' },
+    dark: { ink: '#FCD34D', ink2: '#FDE68A', inkSoft: '#331A03', ribbon: '#FBBF24', ribbonSoft: '#451A03', ribbonInk: '#FDE68A' }
+  },
+  slate: {
+    name: 'Midnight Charcoal',
+    color: '#475569',
+    light: { ink: '#1E293B', ink2: '#334155', inkSoft: '#E2E8F0', ribbon: '#475569', ribbonSoft: '#F1F5F9', ribbonInk: '#0F172A' },
+    dark: { ink: '#94A3B8', ink2: '#CBD5E1', inkSoft: '#1E293B', ribbon: '#64748B', ribbonSoft: '#0F172A', ribbonInk: '#E2E8F0' }
+  }
+};
+
+export const FONTS = {
+  manrope: { name: 'Manrope (Modern Sans)', value: "'Manrope', system-ui, -apple-system, sans-serif" },
+  literata: { name: 'Literata (Editorial Serif)', value: "'Literata', Georgia, serif" },
+  system: { name: 'System Native', value: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" },
+  georgia: { name: 'Georgia (Classic Serif)', value: "Georgia, 'Times New Roman', serif" },
+  mono: { name: 'Monospace (Typewriter)', value: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace" }
+};
+
+export const TEXT_CONTRASTS = {
+  default: { name: 'Default', light: '#182035', dark: '#E5E9F3' },
+  'high-contrast': { name: 'High Contrast (Pure)', light: '#000000', dark: '#FFFFFF' },
+  warm: { name: 'Warm Charcoal', light: '#2D2421', dark: '#F5EBE6' },
+  sepia: { name: 'Sepia Reading', light: '#3D2E1E', dark: '#EFE6D5' }
+};
+
+export function applyTheme() {
   const t = localStorage.getItem('nj-theme') || 'system';
   const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const root = document.documentElement;
+
+  // 1. Global Color Theme / Accent
+  const themeKey = localStorage.getItem('nj-color-theme') || 'navy';
+  const customColor = localStorage.getItem('nj-custom-color');
+  if (themeKey === 'custom' && customColor) {
+    root.style.setProperty('--ribbon', customColor);
+    root.style.setProperty('--ribbon-soft', customColor + '26');
+    root.style.setProperty('--ink', customColor);
+  } else {
+    const palette = THEMES[themeKey] || THEMES.navy;
+    const colors = dark ? palette.dark : palette.light;
+    root.style.setProperty('--ink', colors.ink);
+    root.style.setProperty('--ink-2', colors.ink2);
+    root.style.setProperty('--ink-soft', colors.inkSoft);
+    root.style.setProperty('--ribbon', colors.ribbon);
+    root.style.setProperty('--ribbon-soft', colors.ribbonSoft);
+    root.style.setProperty('--ribbon-ink', colors.ribbonInk);
+  }
+
+  // 2. Global Font
+  const fontKey = localStorage.getItem('nj-font') || 'manrope';
+  const fontDef = FONTS[fontKey] || FONTS.manrope;
+  root.style.setProperty('--sans', fontDef.value);
+  if (fontKey === 'literata' || fontKey === 'georgia') {
+    root.style.setProperty('--serif', fontDef.value);
+  }
+
+  // 3. Global Text Color
+  const contrastKey = localStorage.getItem('nj-text-contrast') || 'default';
+  const contrastDef = TEXT_CONTRASTS[contrastKey] || TEXT_CONTRASTS.default;
+  const textColor = dark ? contrastDef.dark : contrastDef.light;
+  root.style.setProperty('--text', textColor);
+
   const meta = document.querySelector('meta[name=theme-color]');
-  if (meta) meta.content = dark ? '#0F1527' : '#1B2744';
+  if (meta) {
+    const pal = THEMES[themeKey] || THEMES.navy;
+    meta.content = dark ? '#0F1527' : (pal.light ? pal.light.ink : '#1B2744');
+  }
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 applyTheme();

@@ -6,6 +6,7 @@ import * as backup from '../backup.js';
 import * as drive from '../drive.js';
 import * as notify from '../notify.js';
 import { APP } from '../config.js';
+import { THEMES, FONTS, TEXT_CONTRASTS } from '../app.js';
 import { isNative, saveFile, pickFile, biometricAvailable, biometricEnabled, biometricEnable, biometricDisable } from '../native.js';
 import { pageHead } from '../components.js';
 
@@ -125,8 +126,63 @@ export async function render(root, ctx) {
 
   // Appearance
   const theme = localStorage.getItem('nj-theme') || 'system';
+  const colorTheme = localStorage.getItem('nj-color-theme') || 'navy';
+  const currentFont = localStorage.getItem('nj-font') || 'manrope';
+  const currentContrast = localStorage.getItem('nj-text-contrast') || 'default';
+  const customColorVal = localStorage.getItem('nj-custom-color') || '#1B2744';
+
+  const swatchesWrap = h('div', { class: 'color-swatches' });
+  Object.entries(THEMES).forEach(([key, th]) => {
+    const isActive = colorTheme === key;
+    const btn = h('button', {
+      class: 'color-swatch-btn' + (isActive ? ' active' : ''),
+      type: 'button',
+      title: th.name,
+      'aria-label': th.name,
+      style: `background: ${th.color};`,
+      onclick: () => {
+        localStorage.setItem('nj-color-theme', key);
+        ctx.applyTheme();
+        render(root, ctx);
+      }
+    });
+    if (isActive) {
+      btn.append(icon('check', 16, 'swatch-check'));
+    }
+    swatchesWrap.append(btn);
+  });
+
+  // Custom Color picker
+  const customInput = h('input', {
+    type: 'color',
+    value: customColorVal,
+    title: 'Custom accent color',
+    'aria-label': 'Custom accent color',
+    onchange: (e) => {
+      localStorage.setItem('nj-color-theme', 'custom');
+      localStorage.setItem('nj-custom-color', e.target.value);
+      ctx.applyTheme();
+      render(root, ctx);
+    }
+  });
+  const customWrap = h('label', {
+    class: 'custom-color-wrap' + (colorTheme === 'custom' ? ' active' : ''),
+    title: 'Pick custom color',
+    style: colorTheme === 'custom' ? `background: ${customColorVal}; border-style: solid; border-color: var(--text);` : ''
+  },
+    customInput,
+    colorTheme === 'custom' ? icon('check', 16, 'swatch-check') : icon('plus', 16)
+  );
+  swatchesWrap.append(customWrap);
+
+  const fontOptions = Object.entries(FONTS).map(([k, f]) => [k, f.name]);
+  const contrastOptions = Object.entries(TEXT_CONTRASTS).map(([k, c]) => [k, c.name]);
+
   const appearance = section('Appearance',
-    row('Theme', null, sel(theme, [['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']], (v) => { localStorage.setItem('nj-theme', v); ctx.applyTheme(); }, 'Theme')),
+    row('Theme', 'Light or dark color scheme', sel(theme, [['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']], (v) => { localStorage.setItem('nj-theme', v); ctx.applyTheme(); }, 'Theme')),
+    row('App color theme', 'Choose global accent and interface colors', swatchesWrap),
+    row('App font', 'Choose your preferred typography', sel(currentFont, fontOptions, (v) => { localStorage.setItem('nj-font', v); ctx.applyTheme(); }, 'App font')),
+    row('Text readability & contrast', 'Adjust reading contrast', sel(currentContrast, contrastOptions, (v) => { localStorage.setItem('nj-text-contrast', v); ctx.applyTheme(); }, 'Text contrast')),
     row('Week starts on', null, sel(s.weekStart, [[1, 'Monday'], [0, 'Sunday'], [6, 'Saturday']], (v) => set({ weekStart: Number(v) }), 'Week start')));
 
   // Security

@@ -76,6 +76,10 @@ const P = {
   wand: '<path d="m4 20 11-11M14 4.5v2M19.5 10h-2M17.5 6.5 16 8M10 4l.5 1.5L12 6l-1.5.5L10 8l-.5-1.5L8 6l1.5-.5L10 4ZM19 14l.5 1.5L21 16l-1.5.5L19 18l-.5-1.5L17 16l1.5-.5L19 14Z"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   google: '<path d="M21 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.1a4.4 4.4 0 0 1-1.9 2.9v2.4h3.1c1.7-1.6 2.7-4 2.7-7Z" fill="#4285F4" stroke="none"/><path d="M12 21.5c2.6 0 4.7-.9 6.3-2.3l-3.1-2.4c-.9.6-2 .9-3.2.9-2.5 0-4.6-1.7-5.3-3.9H3.5v2.5A9.5 9.5 0 0 0 12 21.5Z" fill="#34A853" stroke="none"/><path d="M6.7 13.8a5.7 5.7 0 0 1 0-3.6V7.7H3.5a9.5 9.5 0 0 0 0 8.6l3.2-2.5Z" fill="#FBBC05" stroke="none"/><path d="M12 6.3c1.4 0 2.6.5 3.6 1.4l2.7-2.7A9.5 9.5 0 0 0 3.5 7.7l3.2 2.5C7.4 8 9.5 6.3 12 6.3Z" fill="#EA4335" stroke="none"/>',
+  palette: '<circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2C6.5 2 2 6.5 2 12c0 3.6 2 6.8 5 8.5.5.3 1.1-.1 1.1-.7v-1.3c0-1.7 1.3-3 3-3h1.9c3.9 0 7-3.1 7-7 0-3.6-3.6-6.5-8-6.5Z"/>',
+  textColor: '<path d="m4 19 7-15h2l7 15h-2.5l-2-4.5H8.5L6.5 19H4Zm5.3-6.5h5.4L12 6.7 9.3 12.5Z"/><path d="M3 21.5h18" stroke-width="2.6"/>',
+  highlighter: '<path d="m14 3.5 6.5 6.5-9 9H5v-6.5l9-9Z"/><path d="m11 6.5 6.5 6.5M3 21h18"/>',
+  csv: '<path d="M4 4v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6a2 2 0 0 0-2 2Z"/><path d="M14 2v6h6M8 13h1.5a1.5 1.5 0 0 1 0 3H8v-3Zm5 0h2a1.5 1.5 0 0 1 0 3h-2v-3Z"/>',
 };
 
 export function icon(name, size = 20, cls = '') {
@@ -208,7 +212,7 @@ export function debounce(fn, ms) {
 }
 
 // ---------- HTML sanitizer for rich text ----------
-const ALLOWED = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'DIV', 'SPAN', 'A', 'HR', 'MARK']);
+const ALLOWED = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'DIV', 'SPAN', 'A', 'HR', 'MARK', 'FONT']);
 export function sanitize(html) {
   const doc = new DOMParser().parseFromString(`<div>${html || ''}</div>`, 'text/html');
   const walk = (node) => {
@@ -221,8 +225,20 @@ export function sanitize(html) {
           continue;
         }
         for (const a of Array.from(child.attributes)) {
-          const ok = child.tagName === 'A' && a.name === 'href' && /^(https?:|mailto:)/i.test(a.value);
-          if (!ok) child.removeAttribute(a.name);
+          const isHref = child.tagName === 'A' && a.name === 'href' && /^(https?:|mailto:)/i.test(a.value);
+          const isFontAttr = child.tagName === 'FONT' && ['color', 'face', 'size'].includes(a.name);
+          const isStyle = a.name === 'style';
+          if (isStyle) {
+            // Keep safe style properties: color, background-color, font-family, font-size
+            const clean = a.value.split(';').map(s => s.trim()).filter(s => {
+              const p = s.split(':')[0]?.trim().toLowerCase();
+              return ['color', 'background-color', 'font-family', 'font-size'].includes(p);
+            }).join('; ');
+            if (clean) child.setAttribute('style', clean);
+            else child.removeAttribute('style');
+          } else if (!isHref && !isFontAttr) {
+            child.removeAttribute(a.name);
+          }
         }
         if (child.tagName === 'A') { child.setAttribute('target', '_blank'); child.setAttribute('rel', 'noopener'); }
         walk(child);

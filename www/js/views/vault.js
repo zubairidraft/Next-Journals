@@ -1,5 +1,5 @@
 // Password vault
-import { h, icon, iconBtn, toast, openSheet, confirmDialog } from '../ui.js';
+import { h, icon, iconBtn, toast, busy, openSheet, confirmDialog } from '../ui.js';
 import * as store from '../store.js';
 import { tagChips, tagInput, emptyState, pageHead } from '../components.js';
 import { generatePassword, passwordStrength } from '../crypto.js';
@@ -33,6 +33,7 @@ export function render(root) {
   root.append(
     pageHead('Passwords',
       h('button', { class: 'btn ghost hide-sm', onclick: () => generatorSheet() }, icon('wand'), 'Generator'),
+      h('button', { class: 'btn ghost', title: 'Import passwords from CSV', onclick: () => importCsvSheet(() => render(root)) }, icon('csv'), h('span', { class: 'hide-sm' }, 'Import CSV')),
       h('button', { class: 'btn primary', onclick: () => editPassword(store.newPassword(), () => render(root)) }, icon('plus'), h('span', { class: 'hide-sm' }, 'Add password'))),
     all.length ? h('div', { class: 'stack-sm' },
       search,
@@ -43,7 +44,9 @@ export function render(root) {
     list.length
       ? h('div', { class: 'vault-list' }, list.map(p => vaultRow(p, root)))
       : emptyState('vault', all.length ? 'No matching passwords' : 'No passwords saved yet', all.length ? null : 'Store logins, PINs and Wi-Fi keys. They are encrypted with your master password.',
-        all.length ? null : h('button', { class: 'btn primary', onclick: () => editPassword(store.newPassword(), () => render(root)) }, icon('plus'), 'Add first password'))
+        all.length ? null : h('div', { class: 'row gap wrap' },
+          h('button', { class: 'btn primary', onclick: () => editPassword(store.newPassword(), () => render(root)) }, icon('plus'), 'Add first password'),
+          h('button', { class: 'btn ghost', onclick: () => importCsvSheet(() => render(root)) }, icon('csv'), 'Import CSV')))
   );
 }
 
@@ -126,4 +129,206 @@ export function generatorSheet(onUse) {
       h('button', { class: 'btn ghost', onclick: () => copySecret(out.textContent, 'Password') }, icon('copy'), 'Copy'),
       onUse ? h('button', { class: 'btn primary', onclick: () => { onUse(out.textContent); s.close(); } }, 'Use this password') : null)
   ), { title: 'Password generator' });
+}
+
+export function downloadSampleCsv() {
+  const headers = 'Name,Username,Password,URL,Category,Notes,Tags';
+  const rows = [
+    'Google,myemail@gmail.com,Secr3t!P@ss2026,https://accounts.google.com,Email,"Personal Google account",google email',
+    'Netflix,myemail@gmail.com,M0vi3s!Stream#77,https://netflix.com,Personal,"Family plan",entertainment stream',
+    'GitHub,zubairidraft,ghp_DevTokenSample123,https://github.com,Work,"Work repo token",dev github',
+    'Wi-Fi Home,HomeNet-5G,SuperFastWifi99!,http://192.168.1.1,Wi-Fi,"Living room router",wifi home'
+  ];
+  const csvContent = [headers, ...rows].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'NextJournals_Passwords_Sample.csv';
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function parseCsv(text) {
+  const lines = [];
+  let row = [''];
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const next = text[i + 1];
+
+    if (c === '"') {
+      if (inQuotes && next === '"') {
+        row[row.length - 1] += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (c === ',' && !inQuotes) {
+      row.push('');
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') i++;
+      if (row.length > 1 || row[0].trim() !== '') lines.push(row);
+      row = [''];
+    } else {
+      row[row.length - 1] += c;
+    }
+  }
+  if (row.length > 1 || (row[0] && row[0].trim() !== '')) {
+    lines.push(row);
+  }
+  if (!lines.length) return [];
+
+  const rawHeaders = lines[0].map(h => h.trim().toLowerCase());
+  const colIndex = {
+    name: rawHeaders.findIndex(h => ['name', 'title', 'site', 'service'].includes(h)),
+    username: rawHeaders.findIndex(h => ['username', 'login', 'email', 'user'].includes(h)),
+    password: rawHeaders.findIndex(h => ['password', 'pass', 'code'].includes(h)),
+    url: rawHeaders.findIndex(h => ['url', 'website', 'link', 'uri'].includes(h)),
+    category: rawHeaders.findIndex(h => ['category', 'folder', 'group'].includes(h)),
+    notes: rawHeaders.findIndex(h => ['notes', 'note', 'comment', 'description'].includes(h)),
+    tags: rawHeaders.findIndex(h => ['tags', 'tag', 'labels'].includes(h))
+  };
+
+  const results = [];
+  for (let i = 1; i < lines.length; i++) {
+    const r = lines[i];
+    const name = colIndex.name >= 0 ? (r[colIndex.name] || '').trim() : '';
+    const username = colIndex.username >= 0 ? (r[colIndex.username] || '').trim() : '';
+    const password = colIndex.password >= 0 ? (r[colIndex.password] || '').trim() : '';
+    const url = colIndex.url >= 0 ? (r[colIndex.url] || '').trim() : '';
+    const category = colIndex.category >= 0 ? (r[colIndex.category] || '').trim() : 'Personal';
+    const notes = colIndex.notes >= 0 ? (r[colIndex.notes] || '').trim() : '';
+    const tagsRaw = colIndex.tags >= 0 ? (r[colIndex.tags] || '').trim() : '';
+    const tags = tagsRaw ? tagsRaw.split(/[\s,]+/).filter(Boolean) : [];
+
+    const item = {
+      name: name || username || url || (r[0] || '').trim() || 'Untitled',
+      username: username || (colIndex.username === -1 && r[1] ? r[1].trim() : ''),
+      password: password || (colIndex.password === -1 && r[2] ? r[2].trim() : ''),
+      url,
+      category: category || 'Personal',
+      notes,
+      tags
+    };
+    if (item.name || item.password || item.username) {
+      results.push(item);
+    }
+  }
+  return results;
+}
+
+export function importCsvSheet(refresh) {
+  let parsed = [];
+  const statusEl = h('div');
+  const previewWrap = h('div', { class: 'csv-preview-wrap', style: 'display: none;' });
+  const table = h('table', { class: 'csv-preview-table' });
+  previewWrap.append(table);
+
+  const importBtn = h('button', {
+    class: 'btn primary block',
+    type: 'button',
+    disabled: true,
+    style: 'display: none;',
+    onclick: async () => {
+      if (!parsed.length) return;
+      importBtn.disabled = true;
+      const b = busy(`Encrypting and saving ${parsed.length} passwords…`);
+      try {
+        for (const p of parsed) {
+          await store.db.put({
+            type: 'password',
+            name: p.name || 'Untitled',
+            username: p.username || '',
+            password: p.password || '',
+            url: p.url || '',
+            category: p.category || 'Personal',
+            notes: p.notes || '',
+            tags: p.tags || [],
+            favorite: false
+          });
+        }
+        b.done();
+        sheet.close();
+        toast(`Successfully imported ${parsed.length} passwords!`, 'success');
+        refresh();
+      } catch (err) {
+        b.done();
+        toast(err.message, 'error');
+        importBtn.disabled = false;
+      }
+    }
+  }, 'Import passwords');
+
+  const fileInput = h('input', {
+    type: 'file',
+    accept: '.csv,text/csv,text/plain',
+    style: 'display: none;',
+    onchange: async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      parsed = parseCsv(text);
+      if (!parsed.length) {
+        statusEl.innerHTML = '';
+        statusEl.append(h('p', { class: 'notice warn' }, 'No valid password rows found in this CSV. Please check the sample format.'));
+        previewWrap.style.display = 'none';
+        importBtn.style.display = 'none';
+        importBtn.disabled = true;
+        return;
+      }
+
+      statusEl.innerHTML = '';
+      statusEl.append(h('p', { class: 'notice ok' }, `Found ${parsed.length} password(s) ready to import:`));
+
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Category</th>
+            <th>Password</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${parsed.slice(0, 5).map(p => `
+            <tr>
+              <td><b>${p.name || ''}</b></td>
+              <td>${p.username || '<span class="muted">—</span>'}</td>
+              <td><span class="chip">${p.category || 'Personal'}</span></td>
+              <td class="mono">••••••••</td>
+            </tr>
+          `).join('')}
+          ${parsed.length > 5 ? `<tr><td colspan="4" class="muted" style="text-align: center; font-size: 12px;">+ ${parsed.length - 5} more passwords…</td></tr>` : ''}
+        </tbody>
+      `;
+      previewWrap.style.display = 'block';
+      importBtn.style.display = 'block';
+      importBtn.disabled = false;
+      importBtn.textContent = `Import ${parsed.length} passwords`;
+    }
+  });
+
+  const sheet = openSheet(h('div', { class: 'stack' },
+    h('p', { class: 'muted' }, 'Import multiple logins and passwords from a CSV file. All records are encrypted with your master password.'),
+    h('div', { class: 'row gap wrap' },
+      h('button', {
+        class: 'btn ghost grow',
+        type: 'button',
+        onclick: downloadSampleCsv
+      }, icon('download'), 'Download Sample CSV'),
+      h('button', {
+        class: 'btn primary grow',
+        type: 'button',
+        onclick: () => fileInput.click()
+      }, icon('upload'), 'Choose CSV File')
+    ),
+    fileInput,
+    statusEl,
+    previewWrap,
+    importBtn
+  ), { title: 'Import passwords from CSV' });
 }
