@@ -5,6 +5,8 @@ import * as store from './store.js';
 import * as notify from './notify.js';
 import { APP } from './config.js';
 import { isNative, plugin } from './native.js';
+import * as drive from './drive.js';
+import * as sync from './sync.js';
 import { renderLock } from './views/lock.js';
 import * as journal from './views/journal.js';
 import * as calendar from './views/calendar.js';
@@ -166,6 +168,10 @@ async function onUnlocked(info = {}) {
   resetAutoLock();
   notify.rescheduleAll().catch(console.warn);
   if (info.firstRun) toast('Your encrypted diary is ready', 'success');
+  // Auto-sync on unlock if Google Drive is connected
+  if (drive.isConnected()) {
+    sync.smartSync({ quiet: true }).catch(() => {});
+  }
   runBackupCheck();
   backupTimer = setInterval(runBackupCheck, 3600000);
 }
@@ -196,6 +202,33 @@ document.addEventListener('visibilitychange', () => {
   if (!db.isUnlocked()) return;
   const min = store.settings().autoLockMin;
   if (min > 0 && hiddenAt && Date.now() - hiddenAt > min * 60000) lock();
+  else if (drive.isConnected() && Date.now() - sync.lastSyncTime() > 90000) {
+    // Silently sync if returning to app after 90 seconds
+    sync.smartSync({ quiet: true }).catch(() => {});
+  }
+});
+
+// Automatically debounced sync when records are created, updated, or removed
+db.onChange((type) => {
+  if (type === 'create' || type === 'update' || type === 'delete') {
+    sync.scheduleDebouncedSync(4500);
+  }
+});
+
+// React to sync status changes: spin nav icon and refresh view if remote data arrived
+sync.onSyncStatus((state, info) => {
+  const navIcon = root.querySelector('.sync-nav-icon');
+  if (navIcon) {
+    navIcon.classList.toggle('sync-spinning', state === 'start');
+  }
+  if (state === 'success' && info && (info.receivedCount > 0 || info.updatedCount > 0)) {
+    const [path] = location.hash.replace(/^#\/?/, '').split('?');
+    const parts = (path || '').split('/').map(decodeURIComponent);
+    // Only re-render if user is on list view, not currently typing inside an editor
+    if (parts.length < 2 || parts[1] === '') {
+      route();
+    }
+  }
 });
 
 // ---------- Shell ----------
@@ -206,11 +239,21 @@ function buildShell() {
     h('div', { class: 'brand' }, h('div', { class: 'brand-mark' }, icon('journal', 20)), h('div', {}, h('b', {}, APP.name), h('small', {}, 'by ' + APP.company))),
     h('a', { class: 'btn primary block new-btn', href: '#/journal/new' }, icon('plus'), 'New entry'),
     h('nav', { class: 'nav' }, NAV.map(navLink)),
+    h('button', {
+      class: 'nav-item sync-nav-btn',
+      type: 'button',
+      title: 'Synchronize with Google Drive',
+      onclick: () => sync.smartSync({ interactive: true })
+    },
+      icon('refresh', 20, 'sync-nav-icon'),
+      h('span', { class: 'grow' }, 'Sync Drive')
+    ),
     h('button', { class: 'nav-item lock-btn', onclick: lock }, icon('lock', 20), h('span', {}, 'Lock')));
 
   const more = () => {
     const s = openSheet(h('div', { class: 'more-grid' },
       NAV.filter(n => !TABS.includes(n[0])).map(([key, label, ic]) => h('a', { class: 'more-item', href: '#/' + key, onclick: () => s.close() }, icon(ic, 24), h('span', {}, label))),
+      h('button', { class: 'more-item', onclick: () => { s.close(); sync.smartSync({ interactive: true }); } }, icon('refresh', 24), h('span', {}, 'Sync Drive')),
       h('button', { class: 'more-item', onclick: () => { s.close(); lock(); } }, icon('lock', 24), h('span', {}, 'Lock'))
     ), { title: 'More' });
   };

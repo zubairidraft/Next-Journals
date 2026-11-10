@@ -32,6 +32,7 @@ async function gunzip(bytes) {
 async function buildPackage(onProgress) {
   const records = db.all();
   const ids = await db.blobIds();
+  const tombstones = await db.getTombstones();
   const parts = [];
   const index = [];
   let off = 0;
@@ -44,7 +45,7 @@ async function buildPackage(onProgress) {
     onProgress && onProgress(`Packing media ${i + 1}/${ids.length}`);
   }
   const manifest = enc.encode(JSON.stringify({
-    app: 'Next Journals', format: 1, created: Date.now(), records, blobs: index
+    app: 'Next Journals', format: 1, created: Date.now(), records, tombstones, blobs: index
   }));
   const out = new Uint8Array(8 + manifest.length + off);
   out.set(enc.encode('MDPK'), 0);
@@ -59,6 +60,7 @@ function parsePackage(bytes) {
   if (dec.decode(bytes.subarray(0, 4)) !== 'MDPK') throw new Error('Backup content is damaged');
   const mlen = new DataView(bytes.buffer, bytes.byteOffset).getUint32(4);
   const manifest = JSON.parse(dec.decode(bytes.subarray(8, 8 + mlen)));
+  manifest.tombstones = manifest.tombstones || {};
   const base = 8 + mlen;
   const blobs = manifest.blobs.map(b => ({ id: b.id, bytes: bytes.slice(base + b.off, base + b.off + b.len) }));
   return { manifest, blobs };
@@ -94,12 +96,14 @@ export function isBackupFile(bytes) {
 
 export async function decryptBackup(bytes, password) {
   if (!isBackupFile(bytes)) throw new Error('This is not a Next Journals backup file');
+  const pw = password || db.getSessionPassword();
+  if (!pw) throw new Error('Password required to decrypt backup');
   const header = bytes.slice(0, HEADER_LEN);
   const flags = header[8];
   const iterations = new DataView(header.buffer).getUint32(9);
   const salt = header.slice(13, 29);
   const iv = header.slice(29, 41);
-  const key = await deriveKey(password, salt, iterations, ['decrypt']);
+  const key = await deriveKey(pw, salt, iterations, ['decrypt']);
   let plain;
   try {
     plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: header }, key, bytes.subarray(HEADER_LEN)));

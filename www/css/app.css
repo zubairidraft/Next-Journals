@@ -585,6 +585,19 @@ select.input.slim { padding-right: 30px; }
   color: #8B5CF6;
 }
 
+/* Sync Button Animation & States */
+.sync-spinning svg {
+  animation: spin .8s linear infinite !important;
+}
+.sync-btn {
+  transition: all .2s ease;
+}
+.sync-nav-btn {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
 /* Prompt Banner on New Empty Entry */
 .ai-prompt-banner {
   background: var(--surface, #f8fafc);

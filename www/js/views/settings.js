@@ -4,6 +4,7 @@ import * as store from '../store.js';
 import * as db from '../db.js';
 import * as backup from '../backup.js';
 import * as drive from '../drive.js';
+import * as sync from '../sync.js';
 import * as notify from '../notify.js';
 import * as ai from '../ai.js';
 import { APP } from '../config.js';
@@ -26,24 +27,8 @@ export async function exportLocal() {
 }
 
 export async function runDriveBackup({ quiet = false } = {}) {
-  const b = quiet ? null : busy('Connecting to Google Drive…');
-  try {
-    // Get the Google token first, while the tap still counts as a user action
-    // (browsers block the sign-in popup if it opens after a long delay).
-    if (!quiet) { await drive.ensureToken(); b.update('Encrypting backup…'); }
-    const { bytes } = await backup.createBackup((m) => b && b.update(m));
-    b && b.update(`Uploading ${fmtSize(bytes.length)} to Google Drive…`);
-    await drive.uploadBackup(bytes, backup.backupFileName());
-    localStorage.setItem('nj-last-drive', Date.now());
-    await drive.pruneBackups(store.settings().driveKeep || 10).catch(() => {});
-    b && b.done();
-    if (!quiet) toast('Backed up to Google Drive', 'success');
-    return true;
-  } catch (e) {
-    b && b.done();
-    if (!quiet) toast(e.message, 'error', 4500);
-    return false;
-  }
+  const res = await sync.smartSync({ quiet, interactive: !quiet });
+  return res.ok;
 }
 
 // Called on unlock and every hour. Uploads silently only if a Google token is
@@ -239,8 +224,8 @@ export async function render(root, ctx) {
           try { await drive.signIn(); b.done(); toast('Google Drive connected', 'success'); } catch (e) { b.done(); toast(e.message, 'error', 4500); }
           render(root, ctx);
         } }, icon('google'), 'Sign in with Google')),
-    acc ? row('Back up now', `Last Drive backup: ${timeAgo(lastDriveBackup())}`, h('button', { class: 'btn primary', onclick: async () => { await runDriveBackup(); render(root, ctx); } }, icon('cloud'), 'Back up')) : null,
-    acc ? row('Automatic backup', 'Runs when the diary is open and signed in', sel(s.driveAuto, [['off', 'Off'], ['daily', 'Daily'], ['weekly', 'Weekly']], (v) => set({ driveAuto: v }), 'Automatic backup')) : null,
+    acc ? row('Two-way Cloud Sync', `Synchronize all diary entries, tasks, and passwords with Google Drive. Last: ${timeAgo(sync.lastSyncTime() || lastDriveBackup())}`, h('button', { class: 'btn primary', onclick: async () => { await sync.smartSync({ interactive: true }); render(root, ctx); } }, icon('refresh'), 'Sync Now')) : null,
+    acc ? row('Automatic sync & backup', 'Syncs silently when changes occur or diary opens', sel(s.driveAuto, [['off', 'Off'], ['daily', 'Daily'], ['weekly', 'Weekly']], (v) => set({ driveAuto: v }), 'Automatic sync')) : null,
     acc ? row('Keep', 'Older backups are deleted automatically', sel(s.driveKeep, [[5, 'Last 5'], [10, 'Last 10'], [30, 'Last 30'], [100, 'Last 100']], (v) => set({ driveKeep: Number(v) }), 'Backups to keep')) : null,
     acc ? row('Restore from Drive', 'Pick a backup to merge or replace', h('button', { class: 'btn ghost', onclick: () => driveRestore(ctx.refresh) }, icon('download'), 'Browse')) : null);
 

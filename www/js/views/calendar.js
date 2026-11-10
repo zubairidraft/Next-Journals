@@ -2,6 +2,7 @@
 import { h, icon, iconBtn, MONTHS, MOODS, dateStr, todayStr, fmtDate, fmtDue } from '../ui.js';
 import * as store from '../store.js';
 import { entryCard, openLifeInsights } from './journal.js';
+import { createSyncButton } from '../sync.js';
 import { taskRow } from './tasks.js';
 
 let cursor = null;     // first day of the shown month
@@ -59,7 +60,8 @@ function draw(root) {
   root.append(
     h('header', { class: 'page-head' },
       h('h1', {}, `${MONTHS[m]} ${y}`),
-      h('div', { class: 'row gap' },
+      h('div', { class: 'row gap wrap' },
+        createSyncButton({ showLabel: true }),
         iconBtn('left', 'Previous month', () => { cursor = new Date(y, m - 1, 1); draw(root); }),
         h('button', { class: 'btn ghost', onclick: () => { selected = todayStr(); cursor = null; render(root, new URLSearchParams()); } }, 'Today'),
         iconBtn('right', 'Next month', () => { cursor = new Date(y, m + 1, 1); draw(root); }))),

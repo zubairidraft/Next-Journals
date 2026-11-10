@@ -2,6 +2,7 @@
 import { h, icon, iconBtn, openSheet, toast, fmtSize, esc } from './ui.js';
 import * as store from './store.js';
 import { saveFile } from './native.js';
+import { createSyncButton } from './sync.js';
 
 export function tagChip(name, { onRemove, onClick } = {}) {
   return h('span', { class: 'tag t-' + store.tagColor(name), onclick: onClick ? (e) => { e.stopPropagation(); onClick(name); } : null },
@@ -121,7 +122,13 @@ export function emptyState(iconName, title, text, action) {
 }
 
 export function pageHead(title, ...actions) {
-  return h('header', { class: 'page-head' }, h('h1', {}, title), h('div', { class: 'row gap' }, actions));
+  return h('header', { class: 'page-head' },
+    h('h1', {}, title),
+    h('div', { class: 'row gap page-actions wrap' },
+      createSyncButton({ showLabel: true }),
+      actions
+    )
+  );
 }
 
 export { esc };

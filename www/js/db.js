@@ -53,10 +53,13 @@ export const meta = {
 let dataKey = null;     // AES key that encrypts records/blobs (memory only)
 let backupKey = null;   // AES key used for backups (memory only)
 let backupSalt = null;
+let sessionPassword = null; // Master password for automatic background sync (memory only, cleared on lock)
 const cache = new Map(); // decrypted records (memory only)
 const listeners = new Set();
 
 export const isUnlocked = () => !!dataKey;
+export const getSessionPassword = () => sessionPassword;
+export const setSessionPassword = (pw) => { sessionPassword = pw; };
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 function emit(type, rec) { listeners.forEach(fn => { try { fn(type, rec); } catch (e) { console.error(e); } }); }
 
@@ -74,6 +77,7 @@ export async function setupVault(password) {
   dataKey = dk;
   backupSalt = bSalt;
   backupKey = await deriveKey(password, bSalt, PBKDF2_ITERATIONS, ['encrypt', 'decrypt']);
+  sessionPassword = password;
   cache.clear();
   return true;
 }
@@ -91,12 +95,13 @@ export async function unlockVault(password) {
   dataKey = dk;
   backupSalt = v.backupSalt;
   backupKey = await deriveKey(password, v.backupSalt, v.iterations, ['encrypt', 'decrypt']);
+  sessionPassword = password;
   await loadAll();
   return true;
 }
 
 export function lockVault() {
-  dataKey = null; backupKey = null; backupSalt = null;
+  dataKey = null; backupKey = null; backupSalt = null; sessionPassword = null;
   cache.clear();
   emit('lock');
 }
@@ -113,6 +118,7 @@ export async function changePassword(oldPw, newPw) {
   await meta.set('vault', { ...v, salt, iterations: PBKDF2_ITERATIONS, iv, wrapped, backupSalt: bSalt });
   backupSalt = bSalt;
   backupKey = await deriveKey(newPw, bSalt, PBKDF2_ITERATIONS, ['encrypt', 'decrypt']);
+  sessionPassword = newPw;
 }
 
 export async function verifyPassword(pw) {
@@ -169,10 +175,31 @@ export async function putMany(recs) {
   emit('bulk');
 }
 
+export async function getTombstones() {
+  return (await meta.get('tombstones')) || {};
+}
+
+export async function setTombstones(ts) {
+  return meta.set('tombstones', ts);
+}
+
 export async function remove(id) {
   const rec = cache.get(id);
   await tx('records', 'readwrite', s => { s.delete(id); });
   cache.delete(id);
+  // Track deletion timestamp for smart sync
+  try {
+    const tombstones = (await meta.get('tombstones')) || {};
+    tombstones[id] = Date.now();
+    // Prune tombstones older than 90 days
+    const cutoff = Date.now() - 90 * 86400000;
+    for (const k of Object.keys(tombstones)) {
+      if (tombstones[k] < cutoff) delete tombstones[k];
+    }
+    await meta.set('tombstones', tombstones);
+  } catch (e) {
+    console.warn('Could not record tombstone', e);
+  }
   emit('delete', rec || { id });
 }
 
