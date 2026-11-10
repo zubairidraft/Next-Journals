@@ -5,6 +5,7 @@ import { mediaThumb, openMedia, tagChip, emptyState, pageHead } from '../compone
 import { entryCard } from './journal.js';
 import { taskRow, editTask } from './tasks.js';
 import { editPassword } from './vault.js';
+import * as ai from '../ai.js';
 
 // ---------- Media ----------
 let mediaTab = 'all';
@@ -70,6 +71,48 @@ export function renderSearch(root) {
     lastQ = input.value;
     results.innerHTML = '';
     if (!lastQ.trim()) { results.append(h('p', { class: 'muted' }, 'Search journals, tasks, passwords, lists, tags and file names.')); return; }
+
+    // On-device AI command check
+    if (ai.isAiEnabled()) {
+      const cmd = ai.parseNaturalCommand(lastQ);
+      if (cmd && cmd.type === 'create_task') {
+        results.append(h('div', {
+          class: 'notice ok row between gap',
+          style: 'align-items: center; margin-bottom: 14px; padding: 12px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line);'
+        },
+          h('div', { class: 'row gap', style: 'align-items: center;' },
+            icon('wand'),
+            h('div', {},
+              h('small', { class: 'muted block', style: 'font-size: 11px;' }, 'Cactus Needle Quick Action'),
+              h('b', { style: 'font-size: 14px;' }, `Create Task: “${cmd.data.title}”`),
+              cmd.data.due ? h('small', { class: 'muted block', style: 'margin-top: 2px;' }, `Due: ${cmd.data.due.replace('T', ' at ')}`) : null
+            )
+          ),
+          h('button', {
+            class: 'btn primary slim',
+            type: 'button',
+            onclick: async () => {
+              await store.db.put({
+                type: 'task',
+                title: cmd.data.title,
+                notes: 'Created via AI Command Bar',
+                due: cmd.data.due || '',
+                priority: cmd.data.priority || 2,
+                repeat: 'none',
+                subtasks: [],
+                remind: cmd.data.due ? 1 : 0,
+                tags: cmd.data.tags || [],
+                done: false
+              });
+              input.value = '';
+              toast(`Task "${cmd.data.title}" created!`, 'success');
+              run();
+            }
+          }, 'Create Task')
+        ));
+      }
+    }
+
     const r = store.search(lastQ);
     results.append(r.length ? groupResults(r, run) : emptyState('search', 'No results', `Nothing matches “${lastQ}”.`));
   };

@@ -1,6 +1,7 @@
 // Journal list + entry editor
-import { h, icon, iconBtn, toast, confirmDialog, fmtDate, parseDate, MONTHS, WEEKDAYS, MOODS, debounce, sanitize, todayStr, busy } from '../ui.js';
+import { h, icon, iconBtn, toast, confirmDialog, openSheet, fmtDate, parseDate, MONTHS, WEEKDAYS, MOODS, debounce, sanitize, todayStr, busy } from '../ui.js';
 import * as store from '../store.js';
+import * as ai from '../ai.js';
 import { tagChips, tagInput, mediaThumb, recordVoice, emptyState, pageHead } from '../components.js';
 import { pickFile } from '../native.js';
 
@@ -334,12 +335,148 @@ export function renderEditor(root, id, params) {
   };
   drawStrip();
 
-  const tagsBox = tagInput(entry.tags || [], (t) => { entry.tags = t; touch(); });
+  const updateMoodUI = () => {
+    moods.querySelectorAll('.mood').forEach((b, i) => {
+      b.classList.toggle('on', MOODS[i].v === entry.mood);
+      b.setAttribute('aria-checked', String(MOODS[i].v === entry.mood));
+    });
+  };
+
+  const tagsWrap = h('section', { class: 'tags-row' });
+  const renderTagsBox = () => {
+    tagsWrap.innerHTML = '';
+    tagsWrap.append(icon('tag', 18, 'muted'), tagInput(entry.tags || [], (t) => { entry.tags = t; touch(); }));
+  };
+  renderTagsBox();
+
+  const aiAssistSheet = () => {
+    const rawText = (title.value + '\n' + body.innerText).trim();
+    if (rawText.length < 5) {
+      return toast('Write a bit more in your entry first to run AI Assist.', 'info');
+    }
+
+    const detectedMood = ai.detectMood(rawText);
+    const suggestedTags = ai.extractRelevantTags(rawText);
+    const extractedTasks = ai.extractTasksFromText(rawText);
+    const highlights = ai.extractHighlights(rawText);
+
+    const moodObj = MOODS.find(m => m.v === detectedMood);
+
+    let sheet;
+    const moodSection = h('div', { class: 'stack-sm' },
+      h('b', {}, 'Smart Mood & Topic Discovery'),
+      h('div', { class: 'row gap wrap', style: 'align-items: center; margin: 4px 0;' },
+        moodObj ? h('div', { class: 'chip on', style: `--mood: ${moodObj.c};` }, `${moodObj.e} ${moodObj.label}`) : null,
+        suggestedTags.map(t => h('span', { class: 'chip' }, '#' + t))
+      ),
+      h('button', {
+        class: 'btn ghost slim',
+        style: 'align-self: flex-start; margin-top: 4px;',
+        type: 'button',
+        onclick: () => {
+          if (detectedMood) {
+            entry.mood = detectedMood;
+            updateMoodUI();
+          }
+          if (suggestedTags.length) {
+            entry.tags = Array.from(new Set([...(entry.tags || []), ...suggestedTags]));
+            renderTagsBox();
+          }
+          touch();
+          toast('Mood & tags applied to entry!', 'success');
+        }
+      }, 'Apply to Entry')
+    );
+
+    const tasksSection = h('div', { class: 'stack-sm', style: 'margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);' },
+      h('div', { class: 'row between' },
+        h('b', {}, `Extracted Tasks (${extractedTasks.length})`),
+        extractedTasks.length ? h('button', {
+          class: 'btn primary slim',
+          type: 'button',
+          onclick: async () => {
+            for (const t of extractedTasks) {
+              await store.db.put({
+                type: 'task',
+                title: t.title,
+                notes: 'Extracted by Cactus Needle AI from entry',
+                due: t.due || '',
+                priority: t.priority || 2,
+                repeat: 'none',
+                subtasks: [],
+                remind: t.due ? 1 : 0,
+                tags: t.tags || [],
+                done: false
+              });
+            }
+            toast(`Created ${extractedTasks.length} task(s)!`, 'success');
+            sheet.close();
+          }
+        }, 'Create All Tasks') : null
+      ),
+      extractedTasks.length
+        ? h('div', { class: 'stack-sm', style: 'margin-top: 6px;' },
+            extractedTasks.map(t => h('div', {
+              class: 'row between gap',
+              style: 'padding: 8px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;'
+            },
+              h('div', { class: 'grow' },
+                h('div', { style: 'font-weight: 600; font-size: 13.5px;' }, t.title),
+                t.due ? h('small', { class: 'muted' }, 'Due: ' + t.due.replace('T', ' at ')) : null
+              ),
+              h('button', {
+                class: 'btn ghost slim',
+                type: 'button',
+                onclick: async (e) => {
+                  e.target.disabled = true;
+                  await store.db.put({
+                    type: 'task',
+                    title: t.title,
+                    notes: 'Extracted by Cactus Needle AI from entry',
+                    due: t.due || '',
+                    priority: t.priority || 2,
+                    repeat: 'none',
+                    subtasks: [],
+                    remind: t.due ? 1 : 0,
+                    tags: t.tags || [],
+                    done: false
+                  });
+                  e.target.textContent = 'Created ✓';
+                  toast('Task created!', 'success');
+                }
+              }, 'Add')
+            ))
+          )
+        : h('p', { class: 'muted', style: 'font-size: 13px;' }, 'No specific action items found in this entry.')
+    );
+
+    const highlightsSection = highlights.length ? h('div', { class: 'stack-sm', style: 'margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);' },
+      h('b', {}, 'Key Highlights'),
+      h('ul', { style: 'padding-left: 20px; margin: 4px 0; font-size: 13.5px; line-height: 1.6;' },
+        highlights.map(hl => h('li', {}, hl))
+      )
+    ) : null;
+
+    sheet = openSheet(h('div', { class: 'stack' },
+      h('div', { class: 'notice ok row gap', style: 'align-items: center;' },
+        icon('wand'),
+        h('div', {},
+          h('b', { style: 'font-size: 13px;' }, 'Cactus Needle (On-Device AI)'),
+          h('small', { class: 'muted block' }, 'Runs 100% locally on this device. Zero-knowledge privacy.')
+        )
+      ),
+      moodSection,
+      tasksSection,
+      highlightsSection
+    ), { title: 'AI Assistant' });
+  };
 
   root.append(h('div', { class: 'editor' },
     h('div', { class: 'editor-bar' },
       h('a', { class: 'icon-btn', href: '#/journal', 'aria-label': 'Back to journal', onclick: () => save.flush() }, icon('left')),
-      dateInput, timeInput, h('span', { class: 'grow' }), status, favBtn, delBtn),
+      dateInput, timeInput, h('span', { class: 'grow' }),
+      iconBtn('wand', 'AI Assistant', aiAssistSheet),
+      status, favBtn, delBtn),
     h('article', { class: 'page' },
       title,
       moods,
@@ -351,8 +488,9 @@ export function renderEditor(root, id, params) {
         h('div', { class: 'row gap wrap' },
           h('button', { class: 'btn ghost', type: 'button', onclick: async () => attach(await pickFile('*/*', true)) }, icon('clip'), 'Add files'),
           h('button', { class: 'btn ghost', type: 'button', onclick: async () => attach(await pickFile('image/*,video/*', true)) }, icon('camera'), 'Photo or video'),
-          h('button', { class: 'btn ghost', type: 'button', onclick: async () => { const f = await recordVoice(); if (f) attach([f]); } }, icon('mic'), 'Voice note'))),
-      h('section', { class: 'tags-row' }, icon('tag', 18, 'muted'), tagsBox))
+          h('button', { class: 'btn ghost', type: 'button', onclick: async () => { const f = await recordVoice(); if (f) attach([f]); } }, icon('mic'), 'Voice note'),
+          h('button', { class: 'btn ghost', type: 'button', onclick: aiAssistSheet }, icon('wand'), 'AI Assist'))),
+      tagsWrap)
   ));
 
   // Drop files onto the page

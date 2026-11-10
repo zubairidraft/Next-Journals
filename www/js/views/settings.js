@@ -5,6 +5,7 @@ import * as db from '../db.js';
 import * as backup from '../backup.js';
 import * as drive from '../drive.js';
 import * as notify from '../notify.js';
+import * as ai from '../ai.js';
 import { APP } from '../config.js';
 import { THEMES, FONTS, TEXT_CONTRASTS } from '../app.js';
 import { isNative, saveFile, pickFile, biometricAvailable, biometricEnabled, biometricEnable, biometricDisable } from '../native.js';
@@ -209,6 +210,20 @@ export async function render(root, ctx) {
     row('Reminder time', null, h('input', { type: 'time', class: 'input slim', value: s.dailyReminderTime, 'aria-label': 'Reminder time', onchange: async (e) => { await set({ dailyReminderTime: e.target.value || '21:00' }); notify.rescheduleAll(); } })),
     !isNative() ? h('p', { class: 'hint pad' }, 'In the browser, reminders appear while Next Journals is open. The Android app delivers them even when closed.') : null);
 
+  // On-Device AI
+  const aiEnabled = ai.isAiEnabled();
+  const aiSection = section('On-Device AI (Cactus Needle)',
+    row('Smart Assistant', 'Analyze journal entries for tasks, mood and tags locally',
+      toggle(aiEnabled, (on) => {
+        ai.setAiEnabled(on);
+        toast(on ? 'On-Device AI enabled' : 'On-Device AI disabled');
+        render(root, ctx);
+      }, 'On-Device AI')),
+    row('Privacy guarantee', 'Zero-knowledge: 100% offline on this device. No text is ever uploaded.',
+      h('span', { class: 'chip on', style: 'border-color: var(--success); color: var(--success);' }, '100% Local & Private')),
+    row('Engine status', 'Cactus Needle Architecture',
+      h('span', { class: 'muted' }, ai.AI_CONFIG.version)));
+
   // Backup (local)
   const local = section('Backup on this device',
     row('Create encrypted backup', `Saves a .njbackup file locked with your master password. Last: ${timeAgo(lastLocalBackup())}`, h('button', { class: 'btn primary', onclick: exportLocal }, icon('download'), 'Back up')),
@@ -241,7 +256,7 @@ export async function render(root, ctx) {
     } }, 'Erase')));
 
   const stats = { entries: store.db.all('entry').length, tasks: store.db.all('task').length, passwords: store.db.all('password').length, media: store.db.all('media').length };
-  root.append(pageHead('Settings'), appearance, security, reminders, local, cloud, danger,
+  root.append(pageHead('Settings'), appearance, security, reminders, aiSection, local, cloud, danger,
     h('footer', { class: 'about' },
       h('b', {}, `${APP.name} ${APP.version}`), h('span', {}, 'by ' + APP.company),
       h('small', { class: 'muted' }, `${stats.entries} entries · ${stats.tasks} tasks · ${stats.passwords} passwords · ${stats.media} files`),
