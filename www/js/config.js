@@ -2,7 +2,7 @@
 export const APP = {
   name: 'Next Journals',
   company: 'Next Edge Marketing',
-  version: '1.4.0',
+  version: '1.4.1',
   androidId: 'com.nextedgemarketing.nextjournals',
 };
 

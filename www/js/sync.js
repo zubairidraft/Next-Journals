@@ -42,17 +42,18 @@ export async function smartSync({ quiet = false, interactive = false } = {}) {
   if (syncing) return { ok: false, message: 'Sync already in progress' };
   if (!db.isUnlocked()) return { ok: false, message: 'Diary is locked' };
 
-  // 1. Google Drive Connection Check
-  if (!drive.isConnected()) {
+  // 1. Google Drive Token Check: If we already have a valid token saved, use it directly!
+  // Only prompt for sign-in if token is missing/expired AND user explicitly tapped Sync.
+  if (!drive.hasValidToken()) {
     if (interactive) {
       try {
-        await drive.signIn();
+        await drive.signIn({ silent: false });
       } catch (e) {
-        toast(e.message, 'error');
+        if (!quiet) toast(e.message, 'error');
         return { ok: false, error: e.message };
       }
     } else {
-      return { ok: false, message: 'Not connected to Google Drive' };
+      return { ok: false, message: 'Google session expired or not connected' };
     }
   }
 
@@ -60,8 +61,6 @@ export async function smartSync({ quiet = false, interactive = false } = {}) {
   notifyStatus('start');
 
   try {
-    await drive.ensureToken();
-
     // 2. Fetch list of remote backups from Google Drive folder
     const files = await drive.listBackups();
     let receivedCount = 0;

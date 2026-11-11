@@ -12,9 +12,37 @@ let gisLoaded = null;
 let tokenClient = null;
 let nativeInit = false;
 
+// Persist token in localStorage so user doesn't get prompted on every action or page reload
+function loadStoredToken() {
+  try {
+    const raw = localStorage.getItem('nj-google-token');
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data && data.token && data.tokenExp) {
+        token = data.token;
+        tokenExp = Number(data.tokenExp) || 0;
+      }
+    }
+  } catch {}
+}
+loadStoredToken();
+
+export function saveToken(t, exp) {
+  token = t;
+  tokenExp = exp;
+  if (t) {
+    localStorage.setItem('nj-google-token', JSON.stringify({ token: t, tokenExp: exp }));
+  } else {
+    localStorage.removeItem('nj-google-token');
+  }
+}
+
 export const account = () => { try { return JSON.parse(localStorage.getItem('nj-google') || 'null'); } catch { return null; } };
 export const isConnected = () => !!account();
-export const hasValidToken = () => !!token && Date.now() < tokenExp - 60000;
+export const hasValidToken = () => {
+  loadStoredToken();
+  return !!token && Date.now() < tokenExp - 60000;
+};
 
 function loadGIS() {
   if (gisLoaded) return gisLoaded;
@@ -45,10 +73,12 @@ export async function signIn({ silent = false } = {}) {
     const res = await SL.login({ provider: 'google', options: { scopes: [DRIVE_SCOPE] } });
     const r = res.result || {};
     if (!r.accessToken || !r.accessToken.token) throw new Error('Google did not grant Drive access. Please try again.');
-    token = r.accessToken.token;
-    tokenExp = Date.now() + 50 * 60000;
+    saveToken(r.accessToken.token, Date.now() + 50 * 60000);
     const p = r.profile || {};
-    localStorage.setItem('nj-google', JSON.stringify({ email: p.email, name: p.name, picture: p.imageUrl }));
+    const existingAcc = account() || {};
+    const email = p.email || existingAcc.email || 'Google Account';
+    const name = p.name || p.givenName || existingAcc.name || email.split('@')[0];
+    localStorage.setItem('nj-google', JSON.stringify({ email, name, picture: p.imageUrl || existingAcc.picture || '' }));
     return account();
   }
 
@@ -62,8 +92,7 @@ export async function signIn({ silent = false } = {}) {
         if (!google.accounts.oauth2.hasGrantedAllScopes(resp, DRIVE_SCOPE)) {
           return reject(new Error('Please allow Next Journals to use Google Drive (tick the Drive box on the Google screen).'));
         }
-        token = resp.access_token;
-        tokenExp = Date.now() + (Number(resp.expires_in) || 3600) * 1000;
+        saveToken(resp.access_token, Date.now() + (Number(resp.expires_in) || 3600) * 1000);
         resolve();
       },
       error_callback: (err) => reject(new Error(err && err.type === 'popup_closed' ? 'Sign-in window was closed' : 'Google sign-in failed')),
@@ -71,8 +100,12 @@ export async function signIn({ silent = false } = {}) {
     const acc = account();
     tokenClient.requestAccessToken({ prompt: silent || acc ? '' : 'consent', login_hint: acc && acc.email ? acc.email : undefined });
   });
-  const p = await fetchProfile();
-  localStorage.setItem('nj-google', JSON.stringify({ email: p && p.email, name: p && p.name, picture: p && p.picture }));
+  const p = await fetchProfile().catch(() => null);
+  const existingAcc = account() || {};
+  const email = (p && p.email) || existingAcc.email || 'Google Account';
+  const name = (p && p.name) || existingAcc.name || email.split('@')[0];
+  const picture = (p && p.picture) || existingAcc.picture || '';
+  localStorage.setItem('nj-google', JSON.stringify({ email, name, picture }));
   return account();
 }
 
@@ -81,20 +114,27 @@ export async function signOut() {
     try { google.accounts.oauth2.revoke(token, () => {}); } catch {}
   }
   if (isNative()) { try { await plugin('SocialLogin').logout({ provider: 'google' }); } catch {} }
-  token = null; tokenExp = 0;
+  saveToken(null, 0);
   localStorage.removeItem('nj-google');
   localStorage.removeItem('nj-drive-folder');
 }
 
-export async function ensureToken() {
-  if (hasValidToken()) return;
-  await signIn({ silent: true });
+export async function ensureToken({ interactive = false } = {}) {
+  if (hasValidToken()) return token;
+  if (!interactive) {
+    throw new Error('Google sign-in token expired. Tap Sync to reconnect.');
+  }
+  await signIn({ silent: false });
+  return token;
 }
 
 async function api(url, opts = {}) {
-  await ensureToken();
+  await ensureToken({ interactive: false });
   const r = await fetch(url, { ...opts, headers: { Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
-  if (r.status === 401) { token = null; throw new Error('Google session expired. Sign in again.'); }
+  if (r.status === 401) {
+    saveToken(null, 0);
+    throw new Error('Google session expired. Tap Sync to sign in again.');
+  }
   if (!r.ok) {
     let msg = 'Google Drive error ' + r.status;
     try { const j = await r.json(); msg = (j.error && j.error.message) || msg; } catch {}
