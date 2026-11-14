@@ -243,7 +243,7 @@ function buildShell() {
       class: 'nav-item sync-nav-btn',
       type: 'button',
       title: 'Synchronize with Google Drive',
-      onclick: () => sync.smartSync({ interactive: true })
+      onclick: () => sync.smartSync({ quiet: false })
     },
       icon('refresh', 20, 'sync-nav-icon'),
       h('span', { class: 'grow' }, 'Sync Drive')
@@ -253,7 +253,7 @@ function buildShell() {
   const more = () => {
     const s = openSheet(h('div', { class: 'more-grid' },
       NAV.filter(n => !TABS.includes(n[0])).map(([key, label, ic]) => h('a', { class: 'more-item', href: '#/' + key, onclick: () => s.close() }, icon(ic, 24), h('span', {}, label))),
-      h('button', { class: 'more-item', onclick: () => { s.close(); sync.smartSync({ interactive: true }); } }, icon('refresh', 24), h('span', {}, 'Sync Drive')),
+      h('button', { class: 'more-item', onclick: () => { s.close(); sync.smartSync({ quiet: false }); } }, icon('refresh', 24), h('span', {}, 'Sync Drive')),
       h('button', { class: 'more-item', onclick: () => { s.close(); lock(); } }, icon('lock', 24), h('span', {}, 'Lock'))
     ), { title: 'More' });
   };

@@ -43,6 +43,72 @@ export const hasValidToken = () => {
   loadStoredToken();
   return !!token && Date.now() < tokenExp - 60000;
 };
+export const getStoredToken = () => {
+  loadStoredToken();
+  return token;
+};
+
+// Silent token refresh — zero popups, zero UI dialogs!
+// Web: uses GIS prompt: 'none' in hidden background iframe
+// Android: uses autoSelectEnabled: true with existing authorized account
+export async function refreshSilent() {
+  const clientId = googleClientId();
+  if (!clientId) return null;
+  const acc = account();
+
+  if (isNative()) {
+    try {
+      const SL = plugin('SocialLogin');
+      if (!nativeInit) { await SL.initialize({ google: { webClientId: clientId, mode: 'online' } }); nativeInit = true; }
+      const res = await SL.login({
+        provider: 'google',
+        options: {
+          scopes: [DRIVE_SCOPE],
+          autoSelectEnabled: true,
+          filterByAuthorizedAccounts: true,
+          forcePrompt: false
+        }
+      });
+      const r = (res && res.result) || {};
+      if (r.accessToken && r.accessToken.token) {
+        saveToken(r.accessToken.token, Date.now() + 50 * 60000);
+        return r.accessToken.token;
+      }
+    } catch (e) {
+      console.warn('Native silent refresh failed:', e);
+    }
+    return null;
+  }
+
+  // Web silent background refresh
+  try {
+    await loadGIS();
+    const freshToken = await new Promise((resolve) => {
+      let done = false;
+      const finish = (t) => { if (!done) { done = true; resolve(t); } };
+      const tc = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: DRIVE_SCOPE + ' openid email profile',
+        prompt: 'none',
+        callback: (resp) => {
+          if (resp && resp.access_token) {
+            saveToken(resp.access_token, Date.now() + (Number(resp.expires_in) || 3600) * 1000);
+            finish(resp.access_token);
+          } else {
+            finish(null);
+          }
+        },
+        error_callback: () => finish(null)
+      });
+      tc.requestAccessToken({ prompt: 'none', login_hint: acc && acc.email ? acc.email : undefined });
+      setTimeout(() => finish(null), 6000);
+    });
+    return freshToken;
+  } catch (e) {
+    console.warn('Web silent refresh failed:', e);
+    return null;
+  }
+}
 
 function loadGIS() {
   if (gisLoaded) return gisLoaded;
@@ -66,6 +132,11 @@ async function fetchProfile() {
 export async function signIn({ silent = false } = {}) {
   const clientId = googleClientId();
   if (!clientId) throw new Error('Add your Google Client ID first (Settings → Google Drive).');
+
+  if (silent) {
+    const s = await refreshSilent();
+    if (s) return account();
+  }
 
   if (isNative()) {
     const SL = plugin('SocialLogin');
@@ -98,7 +169,7 @@ export async function signIn({ silent = false } = {}) {
       error_callback: (err) => reject(new Error(err && err.type === 'popup_closed' ? 'Sign-in window was closed' : 'Google sign-in failed')),
     });
     const acc = account();
-    tokenClient.requestAccessToken({ prompt: silent || acc ? '' : 'consent', login_hint: acc && acc.email ? acc.email : undefined });
+    tokenClient.requestAccessToken({ prompt: acc ? '' : 'consent', login_hint: acc && acc.email ? acc.email : undefined });
   });
   const p = await fetchProfile().catch(() => null);
   const existingAcc = account() || {};
@@ -119,21 +190,40 @@ export async function signOut() {
   localStorage.removeItem('nj-drive-folder');
 }
 
-export async function ensureToken({ interactive = false } = {}) {
+export async function ensureValidToken({ silentOnly = true } = {}) {
   if (hasValidToken()) return token;
-  if (!interactive) {
-    throw new Error('Google sign-in token expired. Tap Sync to reconnect.');
+
+  // Attempt silent refresh first
+  const refreshed = await refreshSilent();
+  if (refreshed) return refreshed;
+
+  // If silent refresh didn't return a new token but we have a stored token, let API try it
+  loadStoredToken();
+  if (token) return token;
+
+  if (silentOnly) {
+    throw new Error('Google session expired. Reconnect in Settings.');
   }
   await signIn({ silent: false });
   return token;
 }
 
+export async function ensureToken({ interactive = false } = {}) {
+  return ensureValidToken({ silentOnly: !interactive });
+}
+
 async function api(url, opts = {}) {
-  await ensureToken({ interactive: false });
-  const r = await fetch(url, { ...opts, headers: { Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
+  await ensureValidToken({ silentOnly: true });
+  let r = await fetch(url, { ...opts, headers: { Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
+  if (r.status === 401) {
+    const refreshed = await refreshSilent();
+    if (refreshed) {
+      r = await fetch(url, { ...opts, headers: { Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
+    }
+  }
   if (r.status === 401) {
     saveToken(null, 0);
-    throw new Error('Google session expired. Tap Sync to sign in again.');
+    throw new Error('Google session expired. Reconnect in Settings.');
   }
   if (!r.ok) {
     let msg = 'Google Drive error ' + r.status;

@@ -31,30 +31,29 @@ function notifyStatus(state, info) {
 export function scheduleDebouncedSync(delayMs = 4000) {
   clearTimeout(debouncedTimer);
   debouncedTimer = setTimeout(() => {
-    if (drive.isConnected() && drive.hasValidToken()) {
+    if (drive.isConnected()) {
       smartSync({ quiet: true }).catch(() => {});
     }
   }, delayMs);
 }
 
-// Live Bidirectional Smart Sync
-export async function smartSync({ quiet = false, interactive = false } = {}) {
+// Live Bidirectional Smart Sync — 100% Background, Zero Popups!
+export async function smartSync({ quiet = false } = {}) {
   if (syncing) return { ok: false, message: 'Sync already in progress' };
   if (!db.isUnlocked()) return { ok: false, message: 'Diary is locked' };
 
-  // 1. Google Drive Token Check: If we already have a valid token saved, use it directly!
-  // Only prompt for sign-in if token is missing/expired AND user explicitly tapped Sync.
-  if (!drive.hasValidToken()) {
-    if (interactive) {
-      try {
-        await drive.signIn({ silent: false });
-      } catch (e) {
-        if (!quiet) toast(e.message, 'error');
-        return { ok: false, error: e.message };
-      }
-    } else {
-      return { ok: false, message: 'Google session expired or not connected' };
-    }
+  // 1. Check if Google Drive is connected
+  if (!drive.isConnected()) {
+    if (!quiet) toast('Google Drive is not connected. Connect in Settings.', 'info');
+    return { ok: false, message: 'Google Drive not connected' };
+  }
+
+  // 2. Ensure valid token silently in background — NEVER open popup modal on sync!
+  try {
+    await drive.ensureValidToken({ silentOnly: true });
+  } catch (e) {
+    if (!quiet) toast(e.message || 'Google session expired. Reconnect in Settings.', 'error');
+    return { ok: false, error: e.message };
   }
 
   syncing = true;
@@ -165,9 +164,9 @@ export async function smartSync({ quiet = false, interactive = false } = {}) {
     if (!quiet) {
       const totalNew = receivedCount + updatedCount;
       if (totalNew > 0) {
-        toast(`Synced with Google Drive! Received ${totalNew} item(s).`, 'success');
+        toast(`Sync complete! ${totalNew} update(s) received.`, 'success');
       } else {
-        toast('Synced with Google Drive. Everything is up to date!', 'success');
+        toast('Sync complete! Everything is up to date.', 'success');
       }
     }
 
@@ -189,7 +188,7 @@ export function createSyncButton({ cls = '', showLabel = true } = {}) {
     type: 'button',
     title: 'Sync with Google Drive',
     'aria-label': 'Sync with Google Drive',
-    onclick: () => smartSync({ interactive: true })
+    onclick: () => smartSync({ quiet: false })
   },
     icon('refresh', 16, 'sync-icon'),
     showLabel ? h('span', { class: 'sync-btn-label hide-sm' }, 'Sync') : null

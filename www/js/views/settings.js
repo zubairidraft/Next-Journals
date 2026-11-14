@@ -27,7 +27,7 @@ export async function exportLocal() {
 }
 
 export async function runDriveBackup({ quiet = false } = {}) {
-  const res = await sync.smartSync({ quiet, interactive: !quiet });
+  const res = await sync.smartSync({ quiet });
   return res.ok;
 }
 
@@ -224,7 +224,7 @@ export async function render(root, ctx) {
           try { await drive.signIn(); b.done(); toast('Google Drive connected', 'success'); } catch (e) { b.done(); toast(e.message, 'error', 4500); }
           render(root, ctx);
         } }, icon('google'), 'Sign in with Google')),
-    acc ? row('Two-way Cloud Sync', `Synchronize all diary entries, tasks, and passwords with Google Drive. Last: ${timeAgo(sync.lastSyncTime() || lastDriveBackup())}`, h('button', { class: 'btn primary', onclick: async () => { await sync.smartSync({ interactive: true }); render(root, ctx); } }, icon('refresh'), 'Sync Now')) : null,
+    acc ? row('Two-way Cloud Sync', `Synchronize all diary entries, tasks, and passwords with Google Drive. Last: ${timeAgo(sync.lastSyncTime() || lastDriveBackup())}`, h('button', { class: 'btn primary', onclick: async () => { await sync.smartSync({ quiet: false }); render(root, ctx); } }, icon('refresh'), 'Sync Now')) : null,
     acc ? row('Automatic sync & backup', 'Syncs silently when changes occur or diary opens', sel(s.driveAuto, [['off', 'Off'], ['daily', 'Daily'], ['weekly', 'Weekly']], (v) => set({ driveAuto: v }), 'Automatic sync')) : null,
     acc ? row('Keep', 'Older backups are deleted automatically', sel(s.driveKeep, [[5, 'Last 5'], [10, 'Last 10'], [30, 'Last 30'], [100, 'Last 100']], (v) => set({ driveKeep: Number(v) }), 'Backups to keep')) : null,
     acc ? row('Restore from Drive', 'Pick a backup to merge or replace', h('button', { class: 'btn ghost', onclick: () => driveRestore(ctx.refresh) }, icon('download'), 'Browse')) : null);
